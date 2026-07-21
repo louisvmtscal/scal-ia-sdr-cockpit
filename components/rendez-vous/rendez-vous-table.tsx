@@ -1,0 +1,338 @@
+"use client";
+
+import { ArrowDownIcon, ArrowUpIcon, ExternalLinkIcon, SearchIcon } from "lucide-react";
+import { useMemo, useOptimistic, useState, useTransition } from "react";
+import { toast } from "sonner";
+
+import {
+  deleteRendezVousAction,
+  toggleHonoreAction,
+  toggleQualifieAction,
+} from "@/actions/rendez-vous";
+import { CompteRenduDialog } from "@/components/rendez-vous/compte-rendu-dialog";
+import { ModifierRendezVousDialog } from "@/components/rendez-vous/modifier-rendez-vous-dialog";
+import { PreparationDialog } from "@/components/rendez-vous/preparation-dialog";
+import { SupprimerRendezVousButton } from "@/components/rendez-vous/supprimer-rendez-vous-button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { COMMERCIAL_LABELS, ORIGINE_LABELS } from "@/lib/constants/rendez-vous";
+import type { RendezVous } from "@/lib/generated/prisma/client";
+import { formatDateTime } from "@/utils/format";
+
+type SortKey = "dateRDV" | "societe";
+type SortDir = "asc" | "desc";
+
+const COMMERCIAL_FILTER_LABELS = {
+  TOUS: "Tous les commerciaux",
+  LOUIS: "Louis",
+  CHLOE: "Chloé",
+};
+
+const ORIGINE_FILTER_LABELS = {
+  TOUTES: "Toutes origines",
+  INBOUND: "Inbound",
+  OUTBOUND: "Outbound",
+};
+
+const HONORE_FILTER_LABELS = {
+  TOUS: "Honoré : tous",
+  OUI: "Honoré : oui",
+  NON: "Honoré : non",
+};
+
+function SortButton({
+  label,
+  active,
+  dir,
+  onClick,
+}: {
+  label: string;
+  active: boolean;
+  dir: SortDir;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="hover:text-foreground inline-flex items-center gap-1"
+    >
+      {label}
+      {active ? (
+        dir === "asc" ? (
+          <ArrowUpIcon className="size-3" />
+        ) : (
+          <ArrowDownIcon className="size-3" />
+        )
+      ) : null}
+    </button>
+  );
+}
+
+export function RendezVousTable({ data }: { data: RendezVous[] }) {
+  const [optimisticData, setOptimisticData] = useOptimistic(
+    data,
+    (
+      state,
+      update:
+        { type: "patch"; id: string; patch: Partial<RendezVous> } | { type: "remove"; id: string },
+    ) => {
+      if (update.type === "remove") {
+        return state.filter((row) => row.id !== update.id);
+      }
+      return state.map((row) => (row.id === update.id ? { ...row, ...update.patch } : row));
+    },
+  );
+  const [, startTransition] = useTransition();
+
+  const [search, setSearch] = useState("");
+  const [filterCommercial, setFilterCommercial] = useState<"TOUS" | "LOUIS" | "CHLOE">("TOUS");
+  const [filterOrigine, setFilterOrigine] = useState<"TOUTES" | "INBOUND" | "OUTBOUND">("TOUTES");
+  const [filterHonore, setFilterHonore] = useState<"TOUS" | "OUI" | "NON">("TOUS");
+  const [sortKey, setSortKey] = useState<SortKey>("dateRDV");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((dir) => (dir === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("desc");
+    }
+  }
+
+  const rows = useMemo(() => {
+    const term = search.trim().toLowerCase();
+
+    const filtered = optimisticData.filter((row) => {
+      if (filterCommercial !== "TOUS" && row.commercial !== filterCommercial) return false;
+      if (filterOrigine !== "TOUTES" && row.origine !== filterOrigine) return false;
+      if (filterHonore !== "TOUS" && row.honore !== (filterHonore === "OUI")) return false;
+
+      if (!term) return true;
+
+      const haystack = [row.nom, row.prenom, row.societe, row.poste, row.email]
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
+
+      return haystack.includes(term);
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      let comparison = 0;
+
+      if (sortKey === "societe") {
+        comparison = a.societe.localeCompare(b.societe);
+      } else {
+        const aValue = a[sortKey]?.getTime() ?? 0;
+        const bValue = b[sortKey]?.getTime() ?? 0;
+        comparison = aValue - bValue;
+      }
+
+      return sortDir === "asc" ? comparison : -comparison;
+    });
+
+    return sorted;
+  }, [optimisticData, search, filterCommercial, filterOrigine, filterHonore, sortKey, sortDir]);
+
+  function handleToggleHonore(row: RendezVous, honore: boolean) {
+    startTransition(async () => {
+      setOptimisticData({ type: "patch", id: row.id, patch: { honore } });
+      await toggleHonoreAction(row.id, honore);
+    });
+  }
+
+  function handleToggleQualifie(row: RendezVous, qualifie: boolean) {
+    startTransition(async () => {
+      setOptimisticData({ type: "patch", id: row.id, patch: { qualifie } });
+      await toggleQualifieAction(row.id, qualifie);
+    });
+  }
+
+  async function handleDelete(row: RendezVous) {
+    setOptimisticData({ type: "remove", id: row.id });
+    try {
+      await deleteRendezVousAction(row.id);
+    } catch {
+      toast.error("La suppression a échoué.");
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-wrap items-center gap-2">
+        <div className="relative min-w-56 flex-1">
+          <SearchIcon className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+          <Input
+            placeholder="Rechercher un nom, une entreprise..."
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            className="pl-8"
+          />
+        </div>
+        <Select
+          value={filterCommercial}
+          onValueChange={(value) => setFilterCommercial(value as typeof filterCommercial)}
+        >
+          <SelectTrigger className="w-40">
+            <SelectValue>
+              {(value: string) =>
+                COMMERCIAL_FILTER_LABELS[value as keyof typeof COMMERCIAL_FILTER_LABELS]
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="TOUS">Tous les commerciaux</SelectItem>
+            <SelectItem value="LOUIS">Louis</SelectItem>
+            <SelectItem value="CHLOE">Chloé</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          value={filterOrigine}
+          onValueChange={(value) => setFilterOrigine(value as typeof filterOrigine)}
+        >
+          <SelectTrigger className="w-40">
+            <SelectValue>
+              {(value: string) =>
+                ORIGINE_FILTER_LABELS[value as keyof typeof ORIGINE_FILTER_LABELS]
+              }
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="TOUTES">Toutes origines</SelectItem>
+            <SelectItem value="INBOUND">Inbound</SelectItem>
+            <SelectItem value="OUTBOUND">Outbound</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          value={filterHonore}
+          onValueChange={(value) => setFilterHonore(value as typeof filterHonore)}
+        >
+          <SelectTrigger className="w-40">
+            <SelectValue>
+              {(value: string) => HONORE_FILTER_LABELS[value as keyof typeof HONORE_FILTER_LABELS]}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="TOUS">Honoré : tous</SelectItem>
+            <SelectItem value="OUI">Honoré : oui</SelectItem>
+            <SelectItem value="NON">Honoré : non</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="rounded-xl border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>
+                <SortButton
+                  label="Date RDV"
+                  active={sortKey === "dateRDV"}
+                  dir={sortDir}
+                  onClick={() => toggleSort("dateRDV")}
+                />
+              </TableHead>
+              <TableHead>Commercial</TableHead>
+              <TableHead>Origine</TableHead>
+              <TableHead>
+                <SortButton
+                  label="Entreprise"
+                  active={sortKey === "societe"}
+                  dir={sortDir}
+                  onClick={() => toggleSort("societe")}
+                />
+              </TableHead>
+              <TableHead>Nom</TableHead>
+              <TableHead>Prénom</TableHead>
+              <TableHead>LinkedIn</TableHead>
+              <TableHead>Honoré</TableHead>
+              <TableHead>Qualifié</TableHead>
+              <TableHead className="text-right">Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={10} className="text-muted-foreground h-32 text-center">
+                  Aucun rendez-vous ne correspond à ces critères.
+                </TableCell>
+              </TableRow>
+            ) : (
+              rows.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell className="whitespace-nowrap">{formatDateTime(row.dateRDV)}</TableCell>
+                  <TableCell>{COMMERCIAL_LABELS[row.commercial]}</TableCell>
+                  <TableCell>{ORIGINE_LABELS[row.origine]}</TableCell>
+                  <TableCell className="font-medium">{row.societe}</TableCell>
+                  <TableCell>{row.nom}</TableCell>
+                  <TableCell>{row.prenom}</TableCell>
+                  <TableCell>
+                    {row.linkedin ? (
+                      <a
+                        href={row.linkedin}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary inline-flex items-center gap-1 hover:underline"
+                      >
+                        <ExternalLinkIcon className="size-4" />
+                        Profil
+                      </a>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={row.honore}
+                      onCheckedChange={(checked) => handleToggleHonore(row, checked)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <Switch
+                      checked={row.qualifie}
+                      onCheckedChange={(checked) => handleToggleQualifie(row, checked)}
+                    />
+                  </TableCell>
+                  <TableCell className="flex items-center justify-end gap-1">
+                    <PreparationDialog
+                      rendezVousId={row.id}
+                      label={`${row.prenom} ${row.nom}`}
+                      preparation={row.preparation}
+                    />
+                    <CompteRenduDialog
+                      rendezVousId={row.id}
+                      label={`${row.prenom} ${row.nom}`}
+                      compteRendu={row.compteRendu}
+                    />
+                    <ModifierRendezVousDialog rendezVous={row} />
+                    <SupprimerRendezVousButton
+                      label={`${row.prenom} ${row.nom}`}
+                      onConfirm={() => handleDelete(row)}
+                    />
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
+    </div>
+  );
+}

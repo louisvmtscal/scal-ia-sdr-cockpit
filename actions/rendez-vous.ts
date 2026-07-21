@@ -1,0 +1,97 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+
+import { prisma } from "@/lib/prisma";
+import { rendezVousSchema, type RendezVousInput } from "@/lib/validations/rendez-vous";
+
+function toDate(value?: string | null) {
+  if (!value) return null;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function buildData(input: RendezVousInput) {
+  return {
+    commercial: input.commercial,
+    origine: input.origine,
+    nom: input.nom,
+    prenom: input.prenom,
+    societe: input.societe,
+    poste: input.poste || null,
+    email: input.email || null,
+    telephone: input.telephone || null,
+    linkedin: input.linkedin || null,
+    notes: input.notes || null,
+  };
+}
+
+function revalidateRendezVous() {
+  revalidatePath("/");
+  revalidatePath("/rendez-vous");
+}
+
+export type RendezVousActionResult = { error: string } | { success: true };
+
+export async function createRendezVousAction(
+  input: RendezVousInput,
+): Promise<RendezVousActionResult> {
+  const parsed = rendezVousSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return { error: "Formulaire invalide, merci de vérifier les champs." };
+  }
+
+  const dateRDV = toDate(parsed.data.dateRDV);
+
+  if (!dateRDV) {
+    return { error: "La date du rendez-vous est invalide." };
+  }
+
+  await prisma.rendezVous.create({
+    data: { ...buildData(parsed.data), dateRDV },
+  });
+
+  revalidateRendezVous();
+  return { success: true };
+}
+
+export async function updateRendezVousAction(
+  id: string,
+  input: RendezVousInput,
+): Promise<RendezVousActionResult> {
+  const parsed = rendezVousSchema.safeParse(input);
+
+  if (!parsed.success) {
+    return { error: "Formulaire invalide, merci de vérifier les champs." };
+  }
+
+  const dateRDV = toDate(parsed.data.dateRDV);
+
+  if (!dateRDV) {
+    return { error: "La date du rendez-vous est invalide." };
+  }
+
+  await prisma.rendezVous.update({
+    where: { id },
+    data: { ...buildData(parsed.data), dateRDV },
+  });
+
+  revalidateRendezVous();
+  return { success: true };
+}
+
+export async function deleteRendezVousAction(id: string) {
+  await prisma.rendezVous.delete({ where: { id } });
+  revalidateRendezVous();
+}
+
+export async function toggleHonoreAction(id: string, honore: boolean) {
+  await prisma.rendezVous.update({ where: { id }, data: { honore } });
+  revalidateRendezVous();
+}
+
+export async function toggleQualifieAction(id: string, qualifie: boolean) {
+  await prisma.rendezVous.update({ where: { id }, data: { qualifie } });
+  revalidateRendezVous();
+}
