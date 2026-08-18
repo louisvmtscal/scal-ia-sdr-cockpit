@@ -3,10 +3,6 @@
     {
       "path": "/api/cron/preparation-rdv",
       "schedule": "0 7 * * *"
-    },
-    {
-      "path": "/api/cron/whatsapp",
-      "schedule": "*/15 * * * *"
     }
   ]
 }
