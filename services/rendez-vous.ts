@@ -1,8 +1,12 @@
 import { endOfWeek, startOfWeek, subWeeks } from "date-fns";
 
-import { ARR_POTENTIEL_PAR_RDV_QUALIFIE } from "@/lib/constants/rendez-vous";
-import type { Commercial } from "@/lib/generated/prisma/enums";
+import { ARR_POTENTIEL_PAR_RDV_QUALIFIE, PRIME_PAR_ORIGINE } from "@/lib/constants/rendez-vous";
+import type { Commercial, Origine } from "@/lib/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
+
+function sommePrimes(rendezVous: Array<{ origine: Origine }>) {
+  return rendezVous.reduce((total, rdv) => total + PRIME_PAR_ORIGINE[rdv.origine], 0);
+}
 
 export async function listRendezVous() {
   return prisma.rendezVous.findMany({ orderBy: { dateRDV: "desc" } });
@@ -24,21 +28,36 @@ export async function getDashboardStats() {
   const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const startNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
 
-  const [aujourdHui, cetteSemaine, ceMois, honores, nonHonores, totalQualifies, total] =
-    await Promise.all([
-      prisma.rendezVous.count({ where: { dateRDV: { gte: startToday, lt: endToday } } }),
-      prisma.rendezVous.count({ where: { dateRDV: { gte: startWeek, lte: endWeek } } }),
-      prisma.rendezVous.count({ where: { dateRDV: { gte: startMonth, lt: startNextMonth } } }),
-      prisma.rendezVous.count({ where: { dateRDV: { lt: now }, honore: true } }),
-      prisma.rendezVous.count({ where: { dateRDV: { lt: now }, honore: false } }),
-      prisma.rendezVous.count({ where: { qualifie: true } }),
-      prisma.rendezVous.count(),
-    ]);
+  const [
+    aujourdHui,
+    cetteSemaine,
+    ceMois,
+    honores,
+    nonHonores,
+    aReplacer,
+    totalQualifies,
+    total,
+    rdvPrimables,
+    rdvPotentiels,
+  ] = await Promise.all([
+    prisma.rendezVous.count({ where: { dateRDV: { gte: startToday, lt: endToday } } }),
+    prisma.rendezVous.count({ where: { dateRDV: { gte: startWeek, lte: endWeek } } }),
+    prisma.rendezVous.count({ where: { dateRDV: { gte: startMonth, lt: startNextMonth } } }),
+    prisma.rendezVous.count({ where: { honore: "OUI" } }),
+    prisma.rendezVous.count({ where: { honore: "NON" } }),
+    prisma.rendezVous.count({ where: { honore: "A_REPLACER" } }),
+    prisma.rendezVous.count({ where: { qualifie: true } }),
+    prisma.rendezVous.count(),
+    prisma.rendezVous.findMany({ where: { honore: "OUI", qualifie: true }, select: { origine: true } }),
+    prisma.rendezVous.findMany({ where: { honore: "EN_ATTENTE" }, select: { origine: true } }),
+  ]);
 
   const rdvPasses = honores + nonHonores;
   const tauxPresence = rdvPasses > 0 ? (honores / rdvPasses) * 100 : 0;
   const tauxQualification = honores > 0 ? (totalQualifies / honores) * 100 : 0;
   const arrPotentiel = totalQualifies * ARR_POTENTIEL_PAR_RDV_QUALIFIE;
+  const mesPrimes = sommePrimes(rdvPrimables);
+  const primesPotentielles = sommePrimes(rdvPotentiels);
 
   return {
     aujourdHui,
@@ -46,9 +65,12 @@ export async function getDashboardStats() {
     ceMois,
     honores,
     nonHonores,
+    aReplacer,
     tauxPresence,
     tauxQualification,
     arrPotentiel,
+    mesPrimes,
+    primesPotentielles,
     total,
   };
 }
@@ -112,7 +134,7 @@ export async function getUpcomingRendezVous(limit = 5) {
 export async function getRelancesNecessaires() {
   const now = new Date();
   return prisma.rendezVous.findMany({
-    where: { dateRDV: { lt: now }, honore: false },
+    where: { dateRDV: { lt: now }, honore: "NON" },
     orderBy: { dateRDV: "desc" },
     take: 5,
   });

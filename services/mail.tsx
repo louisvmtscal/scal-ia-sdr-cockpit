@@ -1,11 +1,13 @@
 import { CompteRenduEmail } from "@/emails/compte-rendu-email";
+import { EmailJ25NotificationEmail } from "@/emails/email-j25-notification-email";
 import { PreparationEmail } from "@/emails/preparation-email";
-import { MAIL_FROM, MAIL_TO_CEO, resend } from "@/integrations/resend";
+import { MAIL_FROM, MAIL_TO_CEO, MAIL_TO_LOUIS, resend } from "@/integrations/resend";
 import { COMMERCIAL_LABELS } from "@/lib/constants/rendez-vous";
 import type { RendezVous } from "@/lib/generated/prisma/client";
 import type { CompteRendu } from "@/lib/validations/compte-rendu";
+import type { EmailJ25 } from "@/lib/validations/email-j25";
 import type { Preparation } from "@/lib/validations/preparation";
-import { formatDateTime } from "@/utils/format";
+import { formatDate, formatDateTime } from "@/utils/format";
 
 export async function sendCompteRenduEmail(rendezVous: RendezVous, compteRendu: CompteRendu) {
   if (!process.env.RESEND_API_KEY) {
@@ -48,6 +50,33 @@ export async function sendPreparationEmail(rendezVous: RendezVous, preparation: 
         commercial={COMMERCIAL_LABELS[rendezVous.commercial]}
         dateRDV={formatDateTime(rendezVous.dateRDV)}
         preparation={preparation}
+      />
+    ),
+  });
+}
+
+/**
+ * Notification interne uniquement : le prospect ne reçoit jamais cet email.
+ * Point d'entrée unique pour l'envoi — remplacer l'appel à `resend` ici
+ * suffit pour changer de fournisseur SMTP (Brevo ou autre) plus tard.
+ */
+export async function sendEmailJ25NotificationEmail(rendezVous: RendezVous, emailJ25: EmailJ25) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("RESEND_API_KEY manquante : notification Email J-25 non envoyée.");
+    return;
+  }
+
+  await resend.emails.send({
+    from: MAIL_FROM,
+    to: MAIL_TO_LOUIS,
+    subject: `Brouillon Email J-25 prêt — ${rendezVous.prenom} ${rendezVous.nom} (${rendezVous.societe})`,
+    react: (
+      <EmailJ25NotificationEmail
+        prenom={rendezVous.prenom}
+        nom={rendezVous.nom}
+        societe={rendezVous.societe}
+        dateRDV={formatDate(rendezVous.dateRDV)}
+        contenu={emailJ25.contenu}
       />
     ),
   });

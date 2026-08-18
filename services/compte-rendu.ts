@@ -3,10 +3,15 @@ import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { anthropic, ANTHROPIC_MODEL } from "@/integrations/anthropic";
 import { DEFAULT_COMPTE_RENDU_PROMPT } from "@/lib/constants/prompts";
 import { prisma } from "@/lib/prisma";
-import { compteRenduSchema } from "@/lib/validations/compte-rendu";
-import { sendCompteRenduEmail } from "@/services/mail";
+import { compteRenduSchema, type CompteRendu } from "@/lib/validations/compte-rendu";
 import { getTemplateContent } from "@/services/templates";
 
+/**
+ * Génère un compte rendu structuré à partir d'une transcription et l'enregistre
+ * sur le rendez-vous. Aucun effet de bord : ni email, ni WhatsApp/SMS, ni
+ * changement du statut Qualifié. Jamais déclenché automatiquement —
+ * uniquement à l'initiative de l'utilisateur (bouton "✨ Générer le compte rendu").
+ */
 export async function genererEtEnregistrerCompteRendu(rendezVousId: string, texteSource: string) {
   const rendezVous = await prisma.rendezVous.findUniqueOrThrow({ where: { id: rendezVousId } });
   const systemPrompt = await getTemplateContent("prompt.compte-rendu", DEFAULT_COMPTE_RENDU_PROMPT);
@@ -38,9 +43,17 @@ export async function genererEtEnregistrerCompteRendu(rendezVousId: string, text
     data: { compteRendu },
   });
 
-  await sendCompteRenduEmail(rendezVous, compteRendu).catch((error) => {
-    console.error("Erreur envoi email du compte rendu :", error);
-  });
+  return compteRendu;
+}
 
+/**
+ * Enregistre une modification manuelle du compte rendu. Pure sauvegarde :
+ * aucun appel IA, aucun email — c'est l'utilisateur qui a rédigé le contenu.
+ */
+export async function modifierCompteRendu(rendezVousId: string, compteRendu: CompteRendu) {
+  await prisma.rendezVous.update({
+    where: { id: rendezVousId },
+    data: { compteRendu },
+  });
   return compteRendu;
 }

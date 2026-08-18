@@ -3,7 +3,10 @@ import {
   CalendarIcon,
   CalendarRangeIcon,
   CheckCircle2Icon,
+  CoinsIcon,
   GaugeIcon,
+  PiggyBankIcon,
+  RefreshCcwIcon,
   TargetIcon,
   TrendingUpIcon,
   XCircleIcon,
@@ -97,6 +100,23 @@ export default async function DashboardPage() {
       value: formatCurrency(stats.arrPotentiel),
       icon: TrendingUpIcon,
       hint: "31 200 € par RDV qualifié",
+    },
+    {
+      label: "💰 Mes primes",
+      value: formatCurrency(stats.mesPrimes),
+      icon: CoinsIcon,
+      hint: "RDV honorés et qualifiés",
+    },
+    {
+      label: "💰 Primes potentielles",
+      value: formatCurrency(stats.primesPotentielles),
+      icon: PiggyBankIcon,
+      hint: "RDV en attente",
+    },
+    {
+      label: "RDV à replacer",
+      value: String(stats.aReplacer),
+      icon: RefreshCcwIcon,
     },
   ];
 

@@ -2,8 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 
+import type { HonoreStatus } from "@/lib/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
-import { rendezVousSchema, type RendezVousInput } from "@/lib/validations/rendez-vous";
+import {
+  honoreStatusSchema,
+  rendezVousSchema,
+  type RendezVousInput,
+} from "@/lib/validations/rendez-vous";
 
 function toDate(value?: string | null) {
   if (!value) return null;
@@ -86,8 +91,11 @@ export async function deleteRendezVousAction(id: string) {
   revalidateRendezVous();
 }
 
-export async function toggleHonoreAction(id: string, honore: boolean) {
-  await prisma.rendezVous.update({ where: { id }, data: { honore } });
+export async function updateHonoreAction(id: string, honore: HonoreStatus) {
+  const parsed = honoreStatusSchema.safeParse(honore);
+  if (!parsed.success) return;
+
+  await prisma.rendezVous.update({ where: { id }, data: { honore: parsed.data } });
   revalidateRendezVous();
 }
 

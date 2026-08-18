@@ -16,7 +16,7 @@ export default async function RendezVousPage() {
         <h1 className="text-lg font-semibold">Suivi des rendez-vous</h1>
         <p className="text-muted-foreground text-sm">{rendezVous.length} rendez-vous au total</p>
       </div>
-      <RendezVousTable data={rendezVous} />
+      <RendezVousTable data={rendezVous} isDev={process.env.NODE_ENV !== "production"} />
     </div>
   );
 }

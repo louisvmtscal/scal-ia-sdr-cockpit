@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const honoreStatusSchema = z.enum(["EN_ATTENTE", "OUI", "NON", "A_REPLACER"]);
+
 export const rendezVousSchema = z.object({
   commercial: z.enum(["LOUIS", "CHLOE"], {
     message: "Merci de choisir le commercial.",

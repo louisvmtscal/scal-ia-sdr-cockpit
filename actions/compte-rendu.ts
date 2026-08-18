@@ -3,8 +3,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { revalidatePath } from "next/cache";
 
-import type { CompteRendu } from "@/lib/validations/compte-rendu";
-import { genererEtEnregistrerCompteRendu } from "@/services/compte-rendu";
+import { compteRenduSchema, type CompteRendu } from "@/lib/validations/compte-rendu";
+import { genererEtEnregistrerCompteRendu, modifierCompteRendu } from "@/services/compte-rendu";
 
 export type GenererCompteRenduResult =
   { success: true; compteRendu: CompteRendu } | { error: string };
@@ -14,7 +14,9 @@ export async function genererCompteRenduAction(
   texteSource: string,
 ): Promise<GenererCompteRenduResult> {
   if (!texteSource.trim()) {
-    return { error: "Merci de coller une transcription ou des notes." };
+    return {
+      error: "Impossible de générer le compte rendu. Vérifie que la transcription Fireflies est disponible.",
+    };
   }
 
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -34,5 +36,29 @@ export async function genererCompteRenduAction(
 
     console.error("Erreur génération compte rendu :", error);
     return { error: "La génération de la synthèse a échoué." };
+  }
+}
+
+export type ModifierCompteRenduResult =
+  { success: true; compteRendu: CompteRendu } | { error: string };
+
+/** Sauvegarde manuelle : aucun appel IA, aucun email — l'utilisateur a modifié le contenu lui-même. */
+export async function modifierCompteRenduAction(
+  rendezVousId: string,
+  compteRendu: CompteRendu,
+): Promise<ModifierCompteRenduResult> {
+  const parsed = compteRenduSchema.safeParse(compteRendu);
+
+  if (!parsed.success) {
+    return { error: "Formulaire invalide, merci de vérifier les champs." };
+  }
+
+  try {
+    await modifierCompteRendu(rendezVousId, parsed.data);
+    revalidatePath("/rendez-vous");
+    return { success: true, compteRendu: parsed.data };
+  } catch (error) {
+    console.error("Erreur modification compte rendu :", error);
+    return { error: "La modification a échoué." };
   }
 }

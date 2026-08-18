@@ -6,10 +6,11 @@ import { toast } from "sonner";
 
 import {
   deleteRendezVousAction,
-  toggleHonoreAction,
   toggleQualifieAction,
+  updateHonoreAction,
 } from "@/actions/rendez-vous";
-import { CompteRenduDialog } from "@/components/rendez-vous/compte-rendu-dialog";
+import { EmailJ25Dialog } from "@/components/rendez-vous/email-j25-dialog";
+import { FirefliesDialog } from "@/components/rendez-vous/fireflies-dialog";
 import { ModifierRendezVousDialog } from "@/components/rendez-vous/modifier-rendez-vous-dialog";
 import { PreparationDialog } from "@/components/rendez-vous/preparation-dialog";
 import { SupprimerRendezVousButton } from "@/components/rendez-vous/supprimer-rendez-vous-button";
@@ -30,8 +31,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { COMMERCIAL_LABELS, ORIGINE_LABELS } from "@/lib/constants/rendez-vous";
+import { COMMERCIAL_LABELS, HONORE_LABELS, ORIGINE_LABELS } from "@/lib/constants/rendez-vous";
 import type { RendezVous } from "@/lib/generated/prisma/client";
+import type { HonoreStatus } from "@/lib/generated/prisma/enums";
 import { formatDateTime } from "@/utils/format";
 
 type SortKey = "dateRDV" | "societe";
@@ -51,8 +53,10 @@ const ORIGINE_FILTER_LABELS = {
 
 const HONORE_FILTER_LABELS = {
   TOUS: "Honoré : tous",
+  EN_ATTENTE: "Honoré : en attente",
   OUI: "Honoré : oui",
   NON: "Honoré : non",
+  A_REPLACER: "Honoré : à replacer",
 };
 
 function SortButton({
@@ -84,7 +88,7 @@ function SortButton({
   );
 }
 
-export function RendezVousTable({ data }: { data: RendezVous[] }) {
+export function RendezVousTable({ data, isDev = false }: { data: RendezVous[]; isDev?: boolean }) {
   const [optimisticData, setOptimisticData] = useOptimistic(
     data,
     (
@@ -103,7 +107,7 @@ export function RendezVousTable({ data }: { data: RendezVous[] }) {
   const [search, setSearch] = useState("");
   const [filterCommercial, setFilterCommercial] = useState<"TOUS" | "LOUIS" | "CHLOE">("TOUS");
   const [filterOrigine, setFilterOrigine] = useState<"TOUTES" | "INBOUND" | "OUTBOUND">("TOUTES");
-  const [filterHonore, setFilterHonore] = useState<"TOUS" | "OUI" | "NON">("TOUS");
+  const [filterHonore, setFilterHonore] = useState<"TOUS" | HonoreStatus>("TOUS");
   const [sortKey, setSortKey] = useState<SortKey>("dateRDV");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
 
@@ -122,7 +126,7 @@ export function RendezVousTable({ data }: { data: RendezVous[] }) {
     const filtered = optimisticData.filter((row) => {
       if (filterCommercial !== "TOUS" && row.commercial !== filterCommercial) return false;
       if (filterOrigine !== "TOUTES" && row.origine !== filterOrigine) return false;
-      if (filterHonore !== "TOUS" && row.honore !== (filterHonore === "OUI")) return false;
+      if (filterHonore !== "TOUS" && row.honore !== filterHonore) return false;
 
       if (!term) return true;
 
@@ -151,10 +155,10 @@ export function RendezVousTable({ data }: { data: RendezVous[] }) {
     return sorted;
   }, [optimisticData, search, filterCommercial, filterOrigine, filterHonore, sortKey, sortDir]);
 
-  function handleToggleHonore(row: RendezVous, honore: boolean) {
+  function handleUpdateHonore(row: RendezVous, honore: HonoreStatus) {
     startTransition(async () => {
       setOptimisticData({ type: "patch", id: row.id, patch: { honore } });
-      await toggleHonoreAction(row.id, honore);
+      await updateHonoreAction(row.id, honore);
     });
   }
 
@@ -231,8 +235,10 @@ export function RendezVousTable({ data }: { data: RendezVous[] }) {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="TOUS">Honoré : tous</SelectItem>
+            <SelectItem value="EN_ATTENTE">Honoré : en attente</SelectItem>
             <SelectItem value="OUI">Honoré : oui</SelectItem>
             <SelectItem value="NON">Honoré : non</SelectItem>
+            <SelectItem value="A_REPLACER">Honoré : à replacer</SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -299,10 +305,20 @@ export function RendezVousTable({ data }: { data: RendezVous[] }) {
                     )}
                   </TableCell>
                   <TableCell>
-                    <Switch
-                      checked={row.honore}
-                      onCheckedChange={(checked) => handleToggleHonore(row, checked)}
-                    />
+                    <Select
+                      value={row.honore}
+                      onValueChange={(value) => handleUpdateHonore(row, value as HonoreStatus)}
+                    >
+                      <SelectTrigger className="w-36">
+                        <SelectValue>{(value: string) => HONORE_LABELS[value as HonoreStatus]}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="EN_ATTENTE">En attente</SelectItem>
+                        <SelectItem value="OUI">Oui</SelectItem>
+                        <SelectItem value="NON">Non</SelectItem>
+                        <SelectItem value="A_REPLACER">À replacer</SelectItem>
+                      </SelectContent>
+                    </Select>
                   </TableCell>
                   <TableCell>
                     <Switch
@@ -311,14 +327,35 @@ export function RendezVousTable({ data }: { data: RendezVous[] }) {
                     />
                   </TableCell>
                   <TableCell className="flex items-center justify-end gap-1">
+                    <EmailJ25Dialog
+                      rendezVousId={row.id}
+                      label={`${row.prenom} ${row.nom}`}
+                      dateRDV={row.dateRDV}
+                      emailJ25={row.emailJ25}
+                      telephone={row.telephone}
+                      whatsappJ1Status={row.whatsappJ1Status}
+                      whatsappJ1SentAt={row.whatsappJ1SentAt}
+                      whatsappJ1CampaignId={row.whatsappJ1CampaignId}
+                      whatsappH2Status={row.whatsappH2Status}
+                      whatsappH2SentAt={row.whatsappH2SentAt}
+                      whatsappH2CampaignId={row.whatsappH2CampaignId}
+                      whatsappLastError={row.whatsappLastError}
+                      isDev={isDev}
+                    />
                     <PreparationDialog
                       rendezVousId={row.id}
                       label={`${row.prenom} ${row.nom}`}
                       preparation={row.preparation}
                     />
-                    <CompteRenduDialog
+                    <FirefliesDialog
                       rendezVousId={row.id}
                       label={`${row.prenom} ${row.nom}`}
+                      societe={row.societe}
+                      dateRDV={row.dateRDV}
+                      firefliesMeetingId={row.firefliesMeetingId}
+                      firefliesMeetingTitle={row.firefliesMeetingTitle}
+                      firefliesMeetingDate={row.firefliesMeetingDate}
+                      firefliesMeetingUrl={row.firefliesMeetingUrl}
                       compteRendu={row.compteRendu}
                     />
                     <ModifierRendezVousDialog rendezVous={row} />

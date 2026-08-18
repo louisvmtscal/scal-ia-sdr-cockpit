@@ -1,4 +1,4 @@
-import { MailIcon, MessageSquareIcon, SparklesIcon } from "lucide-react";
+import { MailIcon, MessageSquareIcon, SmartphoneIcon, SparklesIcon } from "lucide-react";
 import type { Metadata } from "next";
 
 import { EditTemplateDialog } from "@/components/automations/edit-template-dialog";
@@ -7,6 +7,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { DEFAULT_COMPTE_RENDU_PROMPT, DEFAULT_PREPARATION_PROMPT } from "@/lib/constants/prompts";
 import { getAutomationSteps } from "@/services/automations";
 import { getTemplatesByKeys } from "@/services/templates";
+import { getProchainsRappelsWhatsapp } from "@/services/whatsapp-rappels";
+import { formatDate, formatHeureParis } from "@/utils/format";
+
+function formatJourRelatif(date: Date) {
+  const now = new Date();
+  const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diffJours = Math.round(
+    (startOfDay(date).getTime() - startOfDay(now).getTime()) / 86_400_000,
+  );
+  if (diffJours === 0) return "Aujourd'hui";
+  if (diffJours === 1) return "Demain";
+  return formatDate(date);
+}
 
 export const metadata: Metadata = {
   title: "Automatisations",
@@ -28,9 +41,10 @@ const AI_PROMPTS = [
 ];
 
 export default async function AutomatisationsPage() {
-  const [steps, promptOverrides] = await Promise.all([
+  const [steps, promptOverrides, prochainsRappelsWhatsapp] = await Promise.all([
     getAutomationSteps(),
     getTemplatesByKeys(AI_PROMPTS.map((prompt) => prompt.key)),
+    getProchainsRappelsWhatsapp(),
   ]);
 
   return (
@@ -113,6 +127,44 @@ export default async function AutomatisationsPage() {
             );
           })}
         </div>
+      </div>
+
+      <div>
+        <h2 className="mb-3 flex items-center gap-2 text-base font-semibold">
+          <SmartphoneIcon className="size-4" />
+          Prochains rappels WhatsApp
+        </h2>
+        <Card>
+          <CardContent>
+            {prochainsRappelsWhatsapp.length === 0 ? (
+              <p className="text-muted-foreground py-6 text-center text-sm">
+                Aucun rappel WhatsApp programmé.
+              </p>
+            ) : (
+              <ul className="divide-y">
+                {prochainsRappelsWhatsapp.map(({ rendezVous, type, envoiPrevu }) => (
+                  <li
+                    key={`${rendezVous.id}-${type}`}
+                    className="flex items-center justify-between gap-4 py-3"
+                  >
+                    <div>
+                      <p className="text-sm font-medium">
+                        {formatJourRelatif(envoiPrevu)} — {formatHeureParis(envoiPrevu)}
+                      </p>
+                      <p className="text-muted-foreground text-sm">
+                        {rendezVous.prenom} {rendezVous.nom} — {rendezVous.societe}
+                      </p>
+                    </div>
+                    <Badge variant="outline">
+                      <MessageSquareIcon className="size-3" />
+                      WhatsApp {type === "J1" ? "J-1" : "H-2"} — programmé
+                    </Badge>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

@@ -8,3 +8,5 @@ export const resend = new Resend(process.env.RESEND_API_KEY || "re_placeholder")
 
 export const MAIL_FROM = process.env.MAIL_FROM ?? "Scal-IA Cockpit <cockpit@scal-ia.fr>";
 export const MAIL_TO_CEO = "chloe@scal-ia.fr";
+/** Notifications internes (ex. brouillons Email J-25) : toujours Louis, jamais le prospect. */
+export const MAIL_TO_LOUIS = "louis@scal-ia.fr";

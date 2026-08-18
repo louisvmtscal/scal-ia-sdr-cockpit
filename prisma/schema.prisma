@@ -87,6 +87,28 @@ enum Origine {
   OUTBOUND
 }
 
+enum HonoreStatus {
+  EN_ATTENTE
+  OUI
+  NON
+  A_REPLACER
+}
+
+/** Ancien canal SMS (Brevo) — conservé (non détruit) le temps de valider WhatsApp/Lemlist. */
+enum SmsStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+/** Canal WhatsApp (Lemlist). QUEUED = lead inscrit dans Lemlist, message pas encore confirmé envoyé. */
+enum WhatsappStatus {
+  PENDING
+  QUEUED
+  SENT
+  FAILED
+}
+
 model RendezVous {
   id String @id @default(cuid())
 
@@ -103,14 +125,42 @@ model RendezVous {
 
   dateRDV DateTime
 
-  honore   Boolean @default(false)
-  qualifie Boolean @default(false)
+  honore   HonoreStatus @default(EN_ATTENTE)
+  qualifie Boolean      @default(false)
 
   notes       String?
   compteRendu Json?
   preparation Json?
+  emailJ25    Json?
 
-  firefliesMeetingId String? @unique
+  // --- Ancien canal SMS (Brevo) — conservé, plus utilisé par le cron actif (voir services/whatsapp-rappels.ts) ---
+  smsJ1Status    SmsStatus @default(PENDING)
+  smsJ1SentAt    DateTime?
+  smsJ1MessageId String?
+
+  smsH2Status    SmsStatus @default(PENDING)
+  smsH2SentAt    DateTime?
+  smsH2MessageId String?
+
+  smsLastError String?
+
+  // --- Canal WhatsApp (Lemlist) — canal actif pour les rappels J-1 / H-2 ---
+  whatsappJ1Status     WhatsappStatus @default(PENDING)
+  whatsappJ1SentAt     DateTime?
+  whatsappJ1ExternalId String?
+  whatsappJ1CampaignId String?
+
+  whatsappH2Status     WhatsappStatus @default(PENDING)
+  whatsappH2SentAt     DateTime?
+  whatsappH2ExternalId String?
+  whatsappH2CampaignId String?
+
+  whatsappLastError String?
+
+  firefliesMeetingId    String?   @unique
+  firefliesMeetingTitle String?
+  firefliesMeetingDate  DateTime?
+  firefliesMeetingUrl   String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
