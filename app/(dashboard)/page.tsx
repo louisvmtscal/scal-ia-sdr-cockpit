@@ -83,6 +83,10 @@ export default async function DashboardPage() {
     getRelancesNecessaires(),
   ]);
 
+  const moisEnCours = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(
+    new Date(),
+  );
+
   const statCards = [
     { label: "RDV aujourd'hui", value: String(stats.aujourdHui), icon: CalendarDaysIcon },
     { label: "RDV cette semaine", value: String(stats.cetteSemaine), icon: CalendarRangeIcon },
@@ -105,7 +109,8 @@ export default async function DashboardPage() {
       label: "💰 Mes primes",
       value: formatCurrency(stats.mesPrimes),
       icon: CoinsIcon,
-      hint: "RDV honorés et qualifiés",
+      hint: `RDV honorés et qualifiés — ${moisEnCours}`,
+      microHint: `Mes primes totales : ${formatCurrency(stats.mesPrimesTotal)}`,
     },
     {
       label: "💰 Primes potentielles",

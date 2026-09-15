@@ -36,8 +36,10 @@ export async function getDashboardStats() {
     nonHonores,
     aReplacer,
     totalQualifies,
+    qualifiesEtHonores,
     total,
-    rdvPrimables,
+    rdvPrimablesMois,
+    rdvPrimablesTotal,
     rdvPotentiels,
   ] = await Promise.all([
     prisma.rendezVous.count({ where: { dateRDV: { gte: startToday, lt: endToday } } }),
@@ -47,16 +49,29 @@ export async function getDashboardStats() {
     prisma.rendezVous.count({ where: { honore: "NON" } }),
     prisma.rendezVous.count({ where: { honore: "A_REPLACER" } }),
     prisma.rendezVous.count({ where: { qualifie: true } }),
+    prisma.rendezVous.count({ where: { qualifie: true, honore: "OUI" } }),
     prisma.rendezVous.count(),
+    prisma.rendezVous.findMany({
+      where: {
+        honore: "OUI",
+        qualifie: true,
+        dateRDV: { gte: startMonth, lt: startNextMonth },
+      },
+      select: { origine: true },
+    }),
     prisma.rendezVous.findMany({ where: { honore: "OUI", qualifie: true }, select: { origine: true } }),
     prisma.rendezVous.findMany({ where: { honore: "EN_ATTENTE" }, select: { origine: true } }),
   ]);
 
   const rdvPasses = honores + nonHonores;
   const tauxPresence = rdvPasses > 0 ? (honores / rdvPasses) * 100 : 0;
-  const tauxQualification = honores > 0 ? (totalQualifies / honores) * 100 : 0;
+  // Taux de qualification = RDV honorés ET qualifiés / RDV honorés.
+  const tauxQualification = honores > 0 ? (qualifiesEtHonores / honores) * 100 : 0;
   const arrPotentiel = totalQualifies * ARR_POTENTIEL_PAR_RDV_QUALIFIE;
-  const mesPrimes = sommePrimes(rdvPrimables);
+  // "Mes primes" = mois en cours uniquement. "Mes primes totales" = historique complet, sans limite de temps.
+  const mesPrimes = sommePrimes(rdvPrimablesMois);
+  const mesPrimesTotal = sommePrimes(rdvPrimablesTotal);
+  // Primes potentielles (RDV en attente) : jamais bornées dans le temps.
   const primesPotentielles = sommePrimes(rdvPotentiels);
 
   return {
@@ -70,6 +85,7 @@ export async function getDashboardStats() {
     tauxQualification,
     arrPotentiel,
     mesPrimes,
+    mesPrimesTotal,
     primesPotentielles,
     total,
   };
