@@ -15,10 +15,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import type { WhatsappStatus } from "@/lib/generated/prisma/enums";
+import type { SmsStatus, WhatsappStatus } from "@/lib/generated/prisma/enums";
 import { emailJ25Schema, type EmailJ25 } from "@/lib/validations/email-j25";
 import { formatDate } from "@/utils/format";
 
+import { RappelJourJSection } from "./rappel-jour-j-section";
 import { WhatsappRappelsSection } from "./whatsapp-rappels-section";
 
 export function EmailJ25Dialog({
@@ -34,6 +35,9 @@ export function EmailJ25Dialog({
   whatsappH2SentAt,
   whatsappH2CampaignId,
   whatsappLastError,
+  smsJourJStatus,
+  smsJourJSentAt,
+  smsLastError,
   isDev,
 }: {
   rendezVousId: string;
@@ -48,6 +52,9 @@ export function EmailJ25Dialog({
   whatsappH2SentAt: Date | null;
   whatsappH2CampaignId: string | null;
   whatsappLastError: string | null;
+  smsJourJStatus: SmsStatus;
+  smsJourJSentAt: Date | null;
+  smsLastError: string | null;
   isDev: boolean;
 }) {
   const parsed = emailJ25Schema.safeParse(initialEmailJ25);
@@ -186,6 +193,15 @@ export function EmailJ25Dialog({
           whatsappH2SentAt={whatsappH2SentAt}
           whatsappH2CampaignId={whatsappH2CampaignId}
           whatsappLastError={whatsappLastError}
+          isDev={isDev}
+        />
+
+        <RappelJourJSection
+          rendezVousId={rendezVousId}
+          telephone={telephone}
+          smsJourJStatus={smsJourJStatus}
+          smsJourJSentAt={smsJourJSentAt}
+          smsLastError={smsLastError}
           isDev={isDev}
         />
       </DialogContent>

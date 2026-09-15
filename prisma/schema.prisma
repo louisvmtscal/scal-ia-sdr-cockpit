@@ -133,7 +133,7 @@ model RendezVous {
   preparation Json?
   emailJ25    Json?
 
-  // --- Ancien canal SMS (Brevo) — conservé, plus utilisé par le cron actif (voir services/whatsapp-rappels.ts) ---
+  // --- Ancien canal SMS J-1/H-2 (Brevo) — conservé, plus utilisé par le cron actif (voir services/whatsapp-rappels.ts) ---
   smsJ1Status    SmsStatus @default(PENDING)
   smsJ1SentAt    DateTime?
   smsJ1MessageId String?
@@ -143,6 +143,11 @@ model RendezVous {
   smsH2MessageId String?
 
   smsLastError String?
+
+  // --- Rappel SMS jour J, 9h10 Europe/Paris (Brevo) — canal actif (voir services/rappel-jour-j.ts) ---
+  smsJourJStatus    SmsStatus @default(PENDING)
+  smsJourJSentAt    DateTime?
+  smsJourJMessageId String?
 
   // --- Canal WhatsApp (Lemlist) — canal actif pour les rappels J-1 / H-2 ---
   whatsappJ1Status     WhatsappStatus @default(PENDING)

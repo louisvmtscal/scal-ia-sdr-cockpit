@@ -340,6 +340,9 @@ export function RendezVousTable({ data, isDev = false }: { data: RendezVous[]; i
                       whatsappH2SentAt={row.whatsappH2SentAt}
                       whatsappH2CampaignId={row.whatsappH2CampaignId}
                       whatsappLastError={row.whatsappLastError}
+                      smsJourJStatus={row.smsJourJStatus}
+                      smsJourJSentAt={row.smsJourJSentAt}
+                      smsLastError={row.smsLastError}
                       isDev={isDev}
                     />
                     <PreparationDialog
