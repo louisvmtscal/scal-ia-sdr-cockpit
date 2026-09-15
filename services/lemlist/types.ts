@@ -31,3 +31,13 @@ export type SendWhatsappInput = {
 export type SendWhatsappResult =
   | { success: true; externalId: string }
   | { success: false; error: string };
+
+export type SendSmsInput = {
+  contactId?: string;
+  leadId?: string;
+  message: string;
+};
+
+export type SendSmsResult =
+  | { success: true; externalId: string }
+  | { success: false; error: string };
