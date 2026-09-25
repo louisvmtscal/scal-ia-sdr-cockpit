@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 
+import { auth } from "@/lib/auth";
 import type { HonoreStatus } from "@/lib/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import {
@@ -18,7 +19,7 @@ function toDate(value?: string | null) {
 
 function buildData(input: RendezVousInput) {
   return {
-    commercial: input.commercial,
+    commercialId: input.commercialId,
     origine: input.origine,
     nom: input.nom,
     prenom: input.prenom,
@@ -34,6 +35,19 @@ function buildData(input: RendezVousInput) {
 function revalidateRendezVous() {
   revalidatePath("/");
   revalidatePath("/rendez-vous");
+}
+
+/**
+ * Un SDR ne peut jamais attribuer un RDV à quelqu'un d'autre que lui-même,
+ * même si le payload envoyé dit le contraire (défense en profondeur — le
+ * formulaire cache déjà ce choix côté UI). Admin/Manager choisissent
+ * librement.
+ */
+async function commercialIdAutorise(demande: string): Promise<string | null> {
+  const session = await auth();
+  if (!session?.user?.id) return null;
+  if (session.user.role === "SDR") return session.user.id;
+  return demande;
 }
 
 export type RendezVousActionResult = { error: string } | { success: true };
@@ -53,8 +67,13 @@ export async function createRendezVousAction(
     return { error: "La date du rendez-vous est invalide." };
   }
 
+  const commercialId = await commercialIdAutorise(parsed.data.commercialId);
+  if (!commercialId) {
+    return { error: "Session invalide, merci de te reconnecter." };
+  }
+
   await prisma.rendezVous.create({
-    data: { ...buildData(parsed.data), dateRDV },
+    data: { ...buildData(parsed.data), commercialId, dateRDV },
   });
 
   revalidateRendezVous();
@@ -77,9 +96,14 @@ export async function updateRendezVousAction(
     return { error: "La date du rendez-vous est invalide." };
   }
 
+  const commercialId = await commercialIdAutorise(parsed.data.commercialId);
+  if (!commercialId) {
+    return { error: "Session invalide, merci de te reconnecter." };
+  }
+
   await prisma.rendezVous.update({
     where: { id },
-    data: { ...buildData(parsed.data), dateRDV },
+    data: { ...buildData(parsed.data), commercialId, dateRDV },
   });
 
   revalidateRendezVous();

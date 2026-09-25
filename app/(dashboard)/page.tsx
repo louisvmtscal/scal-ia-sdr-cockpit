@@ -13,13 +13,16 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
+import { redirect } from "next/navigation";
+
 import { CommercialChart } from "@/components/dashboard/commercial-chart";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { WeeklyChart } from "@/components/dashboard/weekly-chart";
 import { FadeIn } from "@/components/shared/fade-in";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { COMMERCIAL_LABELS, ORIGINE_LABELS } from "@/lib/constants/rendez-vous";
+import { auth } from "@/lib/auth";
+import { ORIGINE_LABELS } from "@/lib/constants/rendez-vous";
 import type { RendezVous } from "@/lib/generated/prisma/client";
 import {
   getCommercialComparison,
@@ -30,6 +33,8 @@ import {
 } from "@/services/rendez-vous";
 import { formatCurrency, formatDateTime, formatPercent } from "@/utils/format";
 
+type RendezVousAvecCommercial = RendezVous & { commercial: { name: string | null; email: string } };
+
 function RendezVousMiniList({
   title,
   icon: Icon,
@@ -38,7 +43,7 @@ function RendezVousMiniList({
 }: {
   title: string;
   icon: LucideIcon;
-  items: RendezVous[];
+  items: RendezVousAvecCommercial[];
   emptyMessage: string;
 }) {
   return (
@@ -61,7 +66,7 @@ function RendezVousMiniList({
                     {item.prenom} {item.nom} · {item.societe}
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    {COMMERCIAL_LABELS[item.commercial]} · {formatDateTime(item.dateRDV)}
+                    {item.commercial.name ?? item.commercial.email} · {formatDateTime(item.dateRDV)}
                   </p>
                 </div>
                 <Badge variant="secondary">{ORIGINE_LABELS[item.origine]}</Badge>
@@ -75,12 +80,19 @@ function RendezVousMiniList({
 }
 
 export default async function DashboardPage() {
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/connexion");
+  }
+  const scope = { userId: session.user.id, role: session.user.role };
+  const estAdminOuManager = scope.role === "ADMIN" || scope.role === "MANAGER";
+
   const [stats, weeklySeries, commercialComparison, upcoming, relances] = await Promise.all([
-    getDashboardStats(),
-    getWeeklySeries(),
-    getCommercialComparison(),
-    getUpcomingRendezVous(5),
-    getRelancesNecessaires(),
+    getDashboardStats(scope),
+    getWeeklySeries(scope),
+    estAdminOuManager ? getCommercialComparison() : Promise.resolve(null),
+    getUpcomingRendezVous(scope, 5),
+    getRelancesNecessaires(scope),
   ]);
 
   const moisEnCours = new Intl.DateTimeFormat("fr-FR", { month: "long", year: "numeric" }).format(
@@ -146,16 +158,18 @@ export default async function DashboardPage() {
             </CardContent>
           </Card>
         </FadeIn>
-        <FadeIn delay={0.25}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Louis vs Chloé</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <CommercialChart data={commercialComparison} />
-            </CardContent>
-          </Card>
-        </FadeIn>
+        {commercialComparison ? (
+          <FadeIn delay={0.25}>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Comparatif par commercial</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <CommercialChart data={commercialComparison} />
+              </CardContent>
+            </Card>
+          </FadeIn>
+        ) : null}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">

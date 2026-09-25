@@ -2,7 +2,6 @@ import { normalizeFrenchPhone } from "@/lib/phone";
 import { prisma } from "@/lib/prisma";
 import type { HonoreStatus } from "@/lib/generated/prisma/enums";
 import type { RendezVous } from "@/lib/generated/prisma/client";
-import { COMMERCIAL_LABELS } from "@/lib/constants/rendez-vous";
 import { createLeadInCampaign, LemlistApiError, sendWhatsappMessage } from "@/services/lemlist";
 import { formatHeureParis } from "@/utils/format";
 
@@ -13,6 +12,10 @@ const MS_PAR_HEURE = 3_600_000;
 
 /** Statuts Honoré pour lesquels tout rappel futur doit être annulé. */
 const HONORE_ANNULE_RAPPELS: HonoreStatus[] = ["NON", "A_REPLACER"];
+
+type RendezVousAvecCommercial = RendezVous & {
+  commercial: { name: string | null; email: string };
+};
 
 export type TypeRappel = "J1" | "H2";
 
@@ -46,6 +49,7 @@ export function getRendezVousEligibles() {
       honore: { notIn: HONORE_ANNULE_RAPPELS },
       OR: [{ whatsappJ1Status: "PENDING" }, { whatsappH2Status: "PENDING" }],
     },
+    include: { commercial: true },
     orderBy: { dateRDV: "asc" },
   });
 }
@@ -83,7 +87,7 @@ type ResultatRappel = { rendezVousId: string; type: TypeRappel; statut: "SENT" |
  * campagne Lemlist dédiée, envoie le message WhatsApp, enregistre le
  * résultat.
  */
-async function traiterRappel(rendezVous: RendezVous, type: TypeRappel): Promise<ResultatRappel> {
+async function traiterRappel(rendezVous: RendezVousAvecCommercial, type: TypeRappel): Promise<ResultatRappel> {
   async function marquerEchec(error: string, campaignId?: string) {
     await prisma.rendezVous.update({
       where: { id: rendezVous.id },
@@ -133,7 +137,7 @@ async function traiterRappel(rendezVous: RendezVous, type: TypeRappel): Promise<
       linkedinUrl: rendezVous.linkedin ?? undefined,
       meetingDate: rendezVous.dateRDV.toISOString().slice(0, 10),
       meetingTime: formatHeureParis(rendezVous.dateRDV),
-      commercial: COMMERCIAL_LABELS[rendezVous.commercial],
+      commercial: rendezVous.commercial.name ?? rendezVous.commercial.email,
       appointmentId: rendezVous.id,
     });
     leadId = lead.leadId;
@@ -233,7 +237,7 @@ export async function envoyerWhatsappTest(rendezVousId: string) {
 }
 
 export type ProchainRappelWhatsapp = {
-  rendezVous: RendezVous;
+  rendezVous: RendezVousAvecCommercial;
   type: TypeRappel;
   envoiPrevu: Date;
 };

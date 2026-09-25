@@ -24,8 +24,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { COMMERCIAL_LABELS, ORIGINE_LABELS } from "@/lib/constants/rendez-vous";
+import { ORIGINE_LABELS } from "@/lib/constants/rendez-vous";
 import type { RendezVous } from "@/lib/generated/prisma/client";
+import type { Role } from "@/lib/generated/prisma/enums";
+import type { TeamMember } from "@/lib/team";
 import { rendezVousSchema, type RendezVousInput } from "@/lib/validations/rendez-vous";
 
 function pad(value: number) {
@@ -39,16 +41,20 @@ function toDateTimeLocalValue(date?: Date | null) {
 
 export function RendezVousForm({
   rendezVous,
+  teamMembers,
+  currentUser,
   onSuccess,
 }: {
   rendezVous?: RendezVous;
+  teamMembers: TeamMember[];
+  currentUser: { id: string; role: Role };
   onSuccess?: () => void;
 }) {
   const [isPending, startTransition] = useTransition();
   const form = useForm<RendezVousInput>({
     resolver: zodResolver(rendezVousSchema),
     defaultValues: {
-      commercial: rendezVous?.commercial ?? "LOUIS",
+      commercialId: rendezVous?.commercialId ?? currentUser.id,
       origine: rendezVous?.origine ?? "OUTBOUND",
       nom: rendezVous?.nom ?? "",
       prenom: rendezVous?.prenom ?? "",
@@ -87,24 +93,30 @@ export function RendezVousForm({
         <div className="grid grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="commercial"
+            name="commercialId"
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Commercial</FormLabel>
-                <Select value={field.value} onValueChange={field.onChange}>
+                <Select
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  disabled={currentUser.role === "SDR"}
+                >
                   <FormControl>
                     <SelectTrigger className="w-full">
                       <SelectValue>
                         {(value: string) =>
-                          COMMERCIAL_LABELS[value as keyof typeof COMMERCIAL_LABELS]
+                          teamMembers.find((m) => m.id === value)?.name ??
+                          teamMembers.find((m) => m.id === value)?.email ??
+                          value
                         }
                       </SelectValue>
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {Object.entries(COMMERCIAL_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
+                    {teamMembers.map((member) => (
+                      <SelectItem key={member.id} value={member.id}>
+                        {member.name ?? member.email}
                       </SelectItem>
                     ))}
                   </SelectContent>

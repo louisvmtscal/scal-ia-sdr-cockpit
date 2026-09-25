@@ -29,8 +29,9 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  accounts Account[]
-  sessions Session[]
+  accounts   Account[]
+  sessions   Session[]
+  rendezVous RendezVous[]
 
   @@map("users")
 }
@@ -77,11 +78,6 @@ model VerificationToken {
 
 // --- Domaine : cockpit SDR -----------------------------------------------
 
-enum Commercial {
-  LOUIS
-  CHLOE
-}
-
 enum Origine {
   INBOUND
   OUTBOUND
@@ -112,8 +108,13 @@ enum WhatsappStatus {
 model RendezVous {
   id String @id @default(cuid())
 
-  commercial Commercial
-  origine    Origine
+  // Commercial en charge du RDV — lien vers un vrai compte utilisateur
+  // (remplace l'ancien enum Commercial figé à Louis/Chloé, pour pouvoir
+  // accueillir n'importe quel nouveau SDR sans modification de schéma).
+  commercialId String
+  commercial   User   @relation(fields: [commercialId], references: [id])
+
+  origine Origine
 
   nom       String
   prenom    String
@@ -171,7 +172,7 @@ model RendezVous {
   updatedAt DateTime @updatedAt
 
   @@index([dateRDV])
-  @@index([commercial])
+  @@index([commercialId])
   @@map("rendez_vous")
 }
 

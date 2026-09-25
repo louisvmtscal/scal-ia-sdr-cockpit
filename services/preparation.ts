@@ -20,7 +20,10 @@ export async function getRendezVousDemain() {
 }
 
 export async function genererEtEnregistrerPreparation(rendezVousId: string) {
-  const rendezVous = await prisma.rendezVous.findUniqueOrThrow({ where: { id: rendezVousId } });
+  const rendezVous = await prisma.rendezVous.findUniqueOrThrow({
+    where: { id: rendezVousId },
+    include: { commercial: true },
+  });
   const systemPrompt = await getTemplateContent("prompt.preparation", DEFAULT_PREPARATION_PROMPT);
 
   const formatInstructions =

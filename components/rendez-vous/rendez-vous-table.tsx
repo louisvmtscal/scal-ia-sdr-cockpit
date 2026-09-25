@@ -31,19 +31,18 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { COMMERCIAL_LABELS, HONORE_LABELS, ORIGINE_LABELS } from "@/lib/constants/rendez-vous";
+import { HONORE_LABELS, ORIGINE_LABELS } from "@/lib/constants/rendez-vous";
 import type { RendezVous } from "@/lib/generated/prisma/client";
-import type { HonoreStatus } from "@/lib/generated/prisma/enums";
+import type { HonoreStatus, Role } from "@/lib/generated/prisma/enums";
+import type { TeamMember } from "@/lib/team";
 import { formatDateTime } from "@/utils/format";
+
+export type RendezVousAvecCommercial = RendezVous & {
+  commercial: { id: string; name: string | null; email: string };
+};
 
 type SortKey = "dateRDV" | "societe";
 type SortDir = "asc" | "desc";
-
-const COMMERCIAL_FILTER_LABELS = {
-  TOUS: "Tous les commerciaux",
-  LOUIS: "Louis",
-  CHLOE: "Chloé",
-};
 
 const ORIGINE_FILTER_LABELS = {
   TOUTES: "Toutes origines",
@@ -88,13 +87,24 @@ function SortButton({
   );
 }
 
-export function RendezVousTable({ data, isDev = false }: { data: RendezVous[]; isDev?: boolean }) {
+export function RendezVousTable({
+  data,
+  teamMembers,
+  currentUser,
+  isDev = false,
+}: {
+  data: RendezVousAvecCommercial[];
+  teamMembers: TeamMember[];
+  currentUser: { id: string; role: Role };
+  isDev?: boolean;
+}) {
   const [optimisticData, setOptimisticData] = useOptimistic(
     data,
     (
       state,
       update:
-        { type: "patch"; id: string; patch: Partial<RendezVous> } | { type: "remove"; id: string },
+        | { type: "patch"; id: string; patch: Partial<RendezVousAvecCommercial> }
+        | { type: "remove"; id: string },
     ) => {
       if (update.type === "remove") {
         return state.filter((row) => row.id !== update.id);
@@ -105,7 +115,7 @@ export function RendezVousTable({ data, isDev = false }: { data: RendezVous[]; i
   const [, startTransition] = useTransition();
 
   const [search, setSearch] = useState("");
-  const [filterCommercial, setFilterCommercial] = useState<"TOUS" | "LOUIS" | "CHLOE">("TOUS");
+  const [filterCommercial, setFilterCommercial] = useState<string>("TOUS");
   const [filterOrigine, setFilterOrigine] = useState<"TOUTES" | "INBOUND" | "OUTBOUND">("TOUTES");
   const [filterHonore, setFilterHonore] = useState<"TOUS" | HonoreStatus>("TOUS");
   const [sortKey, setSortKey] = useState<SortKey>("dateRDV");
@@ -124,7 +134,7 @@ export function RendezVousTable({ data, isDev = false }: { data: RendezVous[]; i
     const term = search.trim().toLowerCase();
 
     const filtered = optimisticData.filter((row) => {
-      if (filterCommercial !== "TOUS" && row.commercial !== filterCommercial) return false;
+      if (filterCommercial !== "TOUS" && row.commercialId !== filterCommercial) return false;
       if (filterOrigine !== "TOUTES" && row.origine !== filterOrigine) return false;
       if (filterHonore !== "TOUS" && row.honore !== filterHonore) return false;
 
@@ -155,21 +165,21 @@ export function RendezVousTable({ data, isDev = false }: { data: RendezVous[]; i
     return sorted;
   }, [optimisticData, search, filterCommercial, filterOrigine, filterHonore, sortKey, sortDir]);
 
-  function handleUpdateHonore(row: RendezVous, honore: HonoreStatus) {
+  function handleUpdateHonore(row: RendezVousAvecCommercial, honore: HonoreStatus) {
     startTransition(async () => {
       setOptimisticData({ type: "patch", id: row.id, patch: { honore } });
       await updateHonoreAction(row.id, honore);
     });
   }
 
-  function handleToggleQualifie(row: RendezVous, qualifie: boolean) {
+  function handleToggleQualifie(row: RendezVousAvecCommercial, qualifie: boolean) {
     startTransition(async () => {
       setOptimisticData({ type: "patch", id: row.id, patch: { qualifie } });
       await toggleQualifieAction(row.id, qualifie);
     });
   }
 
-  async function handleDelete(row: RendezVous) {
+  async function handleDelete(row: RendezVousAvecCommercial) {
     setOptimisticData({ type: "remove", id: row.id });
     try {
       await deleteRendezVousAction(row.id);
@@ -190,21 +200,25 @@ export function RendezVousTable({ data, isDev = false }: { data: RendezVous[]; i
             className="pl-8"
           />
         </div>
-        <Select
-          value={filterCommercial}
-          onValueChange={(value) => setFilterCommercial(value as typeof filterCommercial)}
-        >
+        <Select value={filterCommercial} onValueChange={(value) => setFilterCommercial(value ?? "TOUS")}>
           <SelectTrigger className="w-40">
             <SelectValue>
               {(value: string) =>
-                COMMERCIAL_FILTER_LABELS[value as keyof typeof COMMERCIAL_FILTER_LABELS]
+                value === "TOUS"
+                  ? "Tous les commerciaux"
+                  : (teamMembers.find((m) => m.id === value)?.name ??
+                    teamMembers.find((m) => m.id === value)?.email ??
+                    value)
               }
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="TOUS">Tous les commerciaux</SelectItem>
-            <SelectItem value="LOUIS">Louis</SelectItem>
-            <SelectItem value="CHLOE">Chloé</SelectItem>
+            {teamMembers.map((member) => (
+              <SelectItem key={member.id} value={member.id}>
+                {member.name ?? member.email}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select
@@ -284,7 +298,7 @@ export function RendezVousTable({ data, isDev = false }: { data: RendezVous[]; i
               rows.map((row) => (
                 <TableRow key={row.id}>
                   <TableCell className="whitespace-nowrap">{formatDateTime(row.dateRDV)}</TableCell>
-                  <TableCell>{COMMERCIAL_LABELS[row.commercial]}</TableCell>
+                  <TableCell>{row.commercial.name ?? row.commercial.email}</TableCell>
                   <TableCell>{ORIGINE_LABELS[row.origine]}</TableCell>
                   <TableCell className="font-medium">{row.societe}</TableCell>
                   <TableCell>{row.nom}</TableCell>
@@ -361,7 +375,11 @@ export function RendezVousTable({ data, isDev = false }: { data: RendezVous[]; i
                       firefliesMeetingUrl={row.firefliesMeetingUrl}
                       compteRendu={row.compteRendu}
                     />
-                    <ModifierRendezVousDialog rendezVous={row} />
+                    <ModifierRendezVousDialog
+                      rendezVous={row}
+                      teamMembers={teamMembers}
+                      currentUser={currentUser}
+                    />
                     <SupprimerRendezVousButton
                       label={`${row.prenom} ${row.nom}`}
                       onConfirm={() => handleDelete(row)}

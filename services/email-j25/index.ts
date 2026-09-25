@@ -1,4 +1,3 @@
-import { COMMERCIAL_LABELS } from "@/lib/constants/rendez-vous";
 import { prisma } from "@/lib/prisma";
 import { emailJ25Schema, type EmailJ25 } from "@/lib/validations/email-j25";
 import { sendEmailJ25NotificationEmail } from "@/services/mail";
@@ -22,7 +21,7 @@ function buildVariables(rendezVous: {
   societe: string;
   poste: string | null;
   linkedin: string | null;
-  commercial: keyof typeof COMMERCIAL_LABELS;
+  commercial: { name: string | null; email: string };
   dateRDV: Date;
   id: string;
 }): EmailJ25Variables {
@@ -31,7 +30,7 @@ function buildVariables(rendezVous: {
     nom: rendezVous.nom,
     societe: rendezVous.societe,
     dateRDV: formatDate(rendezVous.dateRDV),
-    commercial: COMMERCIAL_LABELS[rendezVous.commercial],
+    commercial: rendezVous.commercial.name ?? rendezVous.commercial.email,
     posteClause: buildPosteClause({ poste: rendezVous.poste, societe: rendezVous.societe }),
     valeurAjoutee: choisirValeurAjoutee(rendezVous.id),
     // V2 : brancher ici dès que ces sources existeront (voir types.ts).
@@ -42,7 +41,10 @@ function buildVariables(rendezVous: {
 }
 
 export async function genererEmailJ25(rendezVousId: string): Promise<EmailJ25> {
-  const rendezVous = await prisma.rendezVous.findUniqueOrThrow({ where: { id: rendezVousId } });
+  const rendezVous = await prisma.rendezVous.findUniqueOrThrow({
+    where: { id: rendezVousId },
+    include: { commercial: true },
+  });
 
   const contenu = renderEmailJ25(buildVariables(rendezVous));
   const emailJ25 = emailJ25Schema.parse({ contenu, genereLe: new Date().toISOString() });

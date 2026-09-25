@@ -31,6 +31,7 @@ export function AppSidebar({
   user: { name?: string | null; email?: string | null; role: string };
 }) {
   const pathname = usePathname();
+  const navItems = NAV_ITEMS.filter((item) => item.url !== "/automatisations" || user.role !== "SDR");
 
   return (
     <Sidebar collapsible="icon" {...props}>
@@ -58,7 +59,7 @@ export function AppSidebar({
         <SidebarGroup>
           <SidebarGroupContent>
             <SidebarMenu>
-              {NAV_ITEMS.map((item) => (
+              {navItems.map((item) => (
                 <SidebarMenuItem key={item.url}>
                   <SidebarMenuButton
                     isActive={pathname === item.url}

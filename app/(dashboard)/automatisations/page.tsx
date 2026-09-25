@@ -1,9 +1,11 @@
 import { MailIcon, MessageSquareIcon, SmartphoneIcon, SparklesIcon } from "lucide-react";
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import { EditTemplateDialog } from "@/components/automations/edit-template-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { auth } from "@/lib/auth";
 import { DEFAULT_COMPTE_RENDU_PROMPT, DEFAULT_PREPARATION_PROMPT } from "@/lib/constants/prompts";
 import { getAutomationSteps } from "@/services/automations";
 import { getTemplatesByKeys } from "@/services/templates";
@@ -41,6 +43,14 @@ const AI_PROMPTS = [
 ];
 
 export default async function AutomatisationsPage() {
+  const session = await auth();
+  if (!session?.user) {
+    redirect("/connexion");
+  }
+  if (session.user.role === "SDR") {
+    redirect("/");
+  }
+
   const [steps, promptOverrides, prochainsRappelsWhatsapp] = await Promise.all([
     getAutomationSteps(),
     getTemplatesByKeys(AI_PROMPTS.map((prompt) => prompt.key)),

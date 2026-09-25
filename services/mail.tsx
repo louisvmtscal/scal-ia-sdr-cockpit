@@ -2,14 +2,21 @@ import { CompteRenduEmail } from "@/emails/compte-rendu-email";
 import { EmailJ25NotificationEmail } from "@/emails/email-j25-notification-email";
 import { PreparationEmail } from "@/emails/preparation-email";
 import { MAIL_FROM, MAIL_TO_CEO, MAIL_TO_LOUIS, resend } from "@/integrations/resend";
-import { COMMERCIAL_LABELS } from "@/lib/constants/rendez-vous";
 import type { RendezVous } from "@/lib/generated/prisma/client";
 import type { CompteRendu } from "@/lib/validations/compte-rendu";
 import type { EmailJ25 } from "@/lib/validations/email-j25";
 import type { Preparation } from "@/lib/validations/preparation";
 import { formatDate, formatDateTime } from "@/utils/format";
 
-export async function sendCompteRenduEmail(rendezVous: RendezVous, compteRendu: CompteRendu) {
+type RendezVousAvecCommercial = RendezVous & {
+  commercial: { name: string | null; email: string };
+};
+
+function nomCommercial(rendezVous: RendezVousAvecCommercial) {
+  return rendezVous.commercial.name ?? rendezVous.commercial.email;
+}
+
+export async function sendCompteRenduEmail(rendezVous: RendezVousAvecCommercial, compteRendu: CompteRendu) {
   if (!process.env.RESEND_API_KEY) {
     console.warn("RESEND_API_KEY manquante : email de compte rendu non envoyé.");
     return;
@@ -24,7 +31,7 @@ export async function sendCompteRenduEmail(rendezVous: RendezVous, compteRendu: 
         prenom={rendezVous.prenom}
         nom={rendezVous.nom}
         societe={rendezVous.societe}
-        commercial={COMMERCIAL_LABELS[rendezVous.commercial]}
+        commercial={nomCommercial(rendezVous)}
         dateRDV={formatDateTime(rendezVous.dateRDV)}
         compteRendu={compteRendu}
       />
@@ -32,7 +39,7 @@ export async function sendCompteRenduEmail(rendezVous: RendezVous, compteRendu: 
   });
 }
 
-export async function sendPreparationEmail(rendezVous: RendezVous, preparation: Preparation) {
+export async function sendPreparationEmail(rendezVous: RendezVousAvecCommercial, preparation: Preparation) {
   if (!process.env.RESEND_API_KEY) {
     console.warn("RESEND_API_KEY manquante : email de préparation non envoyé.");
     return;
@@ -47,7 +54,7 @@ export async function sendPreparationEmail(rendezVous: RendezVous, preparation: 
         prenom={rendezVous.prenom}
         nom={rendezVous.nom}
         societe={rendezVous.societe}
-        commercial={COMMERCIAL_LABELS[rendezVous.commercial]}
+        commercial={nomCommercial(rendezVous)}
         dateRDV={formatDateTime(rendezVous.dateRDV)}
         preparation={preparation}
       />

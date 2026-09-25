@@ -12,8 +12,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import type { Role } from "@/lib/generated/prisma/enums";
+import type { TeamMember } from "@/lib/team";
 
-export function NouveauRendezVousDialog() {
+export function NouveauRendezVousDialog({
+  teamMembers,
+  currentUser,
+}: {
+  teamMembers: TeamMember[];
+  currentUser: { id: string; role: Role };
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -30,7 +38,11 @@ export function NouveauRendezVousDialog() {
         <DialogHeader>
           <DialogTitle>Ajouter un rendez-vous</DialogTitle>
         </DialogHeader>
-        <RendezVousForm onSuccess={() => setOpen(false)} />
+        <RendezVousForm
+          teamMembers={teamMembers}
+          currentUser={currentUser}
+          onSuccess={() => setOpen(false)}
+        />
       </DialogContent>
     </Dialog>
   );

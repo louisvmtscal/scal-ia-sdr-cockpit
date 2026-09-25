@@ -86,7 +86,7 @@ export type SyncSheetResult = {
  * Synchronise le tableau Google Sheet (source de vérité côté Louis) vers
  * RendezVous. Ne supprime jamais une ligne absente du sheet — additif et
  * correctif uniquement (création + mise à jour honore/qualifie/origine/date).
- * Les nouvelles lignes sont créées avec commercial=LOUIS par défaut (le
+ * Les nouvelles lignes sont créées avec Louis comme commercial par défaut (le
  * sheet n'a pas de colonne Commercial — 100% des RDV existants étaient déjà
  * Louis au moment où cette sync a été introduite).
  */
@@ -103,7 +103,10 @@ export async function syncRendezVousFromSheet(): Promise<SyncSheetResult> {
   const raw = await response.text();
 
   const rows = parseCsv(raw);
-  const existing = await prisma.rendezVous.findMany();
+  const [existing, louis] = await Promise.all([
+    prisma.rendezVous.findMany(),
+    prisma.user.findUniqueOrThrow({ where: { email: "louis@scal-ia.fr" } }),
+  ]);
 
   let crees = 0;
   let misAJour = 0;
@@ -150,7 +153,7 @@ export async function syncRendezVousFromSheet(): Promise<SyncSheetResult> {
     } else {
       await prisma.rendezVous.create({
         data: {
-          commercial: "LOUIS",
+          commercialId: louis.id,
           origine,
           nom: row.nom,
           prenom: row.prenom,

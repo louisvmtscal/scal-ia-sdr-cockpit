@@ -12,9 +12,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import type { RendezVous } from "@/lib/generated/prisma/client";
+import type { Role } from "@/lib/generated/prisma/enums";
+import type { TeamMember } from "@/lib/team";
 
-export function ModifierRendezVousDialog({ rendezVous }: { rendezVous: RendezVous }) {
+import type { RendezVousAvecCommercial } from "./rendez-vous-table";
+
+export function ModifierRendezVousDialog({
+  rendezVous,
+  teamMembers,
+  currentUser,
+}: {
+  rendezVous: RendezVousAvecCommercial;
+  teamMembers: TeamMember[];
+  currentUser: { id: string; role: Role };
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -31,7 +42,12 @@ export function ModifierRendezVousDialog({ rendezVous }: { rendezVous: RendezVou
         <DialogHeader>
           <DialogTitle>Modifier le rendez-vous</DialogTitle>
         </DialogHeader>
-        <RendezVousForm rendezVous={rendezVous} onSuccess={() => setOpen(false)} />
+        <RendezVousForm
+          rendezVous={rendezVous}
+          teamMembers={teamMembers}
+          currentUser={currentUser}
+          onSuccess={() => setOpen(false)}
+        />
       </DialogContent>
     </Dialog>
   );

@@ -1,9 +1,4 @@
-import type { Commercial, HonoreStatus, Origine } from "@/lib/generated/prisma/enums";
-
-export const COMMERCIAL_LABELS: Record<Commercial, string> = {
-  LOUIS: "Louis",
-  CHLOE: "Chloé",
-};
+import type { HonoreStatus, Origine } from "@/lib/generated/prisma/enums";
 
 export const ORIGINE_LABELS: Record<Origine, string> = {
   INBOUND: "Inbound",

@@ -26,7 +26,7 @@ async function seedUsers() {
 // Données réelles fournies (suivi des RDV de Louis). Tous les rendez-vous
 // sans heure précisée dans la source sont enregistrés à 00:00.
 const RENDEZ_VOUS_REELS: Array<{
-  commercial: "LOUIS" | "CHLOE";
+  commercialEmail: "louis@scal-ia.fr" | "chloe@scal-ia.fr";
   prenom: string;
   nom: string;
   societe: string;
@@ -36,7 +36,7 @@ const RENDEZ_VOUS_REELS: Array<{
   origine: "INBOUND" | "OUTBOUND";
 }> = [
   {
-    commercial: "LOUIS",
+    commercialEmail: "louis@scal-ia.fr",
     prenom: "Eric",
     nom: "Ingrid",
     societe: "Cloudi-fi",
@@ -46,7 +46,7 @@ const RENDEZ_VOUS_REELS: Array<{
     origine: "OUTBOUND",
   },
   {
-    commercial: "LOUIS",
+    commercialEmail: "louis@scal-ia.fr",
     prenom: "Ingrid",
     nom: "Tatel",
     societe: "EuropaTrad",
@@ -56,7 +56,7 @@ const RENDEZ_VOUS_REELS: Array<{
     origine: "OUTBOUND",
   },
   {
-    commercial: "LOUIS",
+    commercialEmail: "louis@scal-ia.fr",
     prenom: "Ramzi",
     nom: "Ramrani",
     societe: "Groupe Welmo : Boku / Sisters Republic / Ôdass Paris / Fempo",
@@ -66,7 +66,7 @@ const RENDEZ_VOUS_REELS: Array<{
     origine: "OUTBOUND",
   },
   {
-    commercial: "LOUIS",
+    commercialEmail: "louis@scal-ia.fr",
     prenom: "Xavier",
     nom: "Billoir",
     societe: "Xavier Biliward",
@@ -76,7 +76,7 @@ const RENDEZ_VOUS_REELS: Array<{
     origine: "INBOUND",
   },
   {
-    commercial: "LOUIS",
+    commercialEmail: "louis@scal-ia.fr",
     prenom: "François",
     nom: "Stumpf",
     societe: "Norcan SAS",
@@ -86,7 +86,7 @@ const RENDEZ_VOUS_REELS: Array<{
     origine: "OUTBOUND",
   },
   {
-    commercial: "LOUIS",
+    commercialEmail: "louis@scal-ia.fr",
     prenom: "Kamel",
     nom: "Bilel",
     societe: "Skaalab",
@@ -96,7 +96,7 @@ const RENDEZ_VOUS_REELS: Array<{
     origine: "OUTBOUND",
   },
   {
-    commercial: "LOUIS",
+    commercialEmail: "louis@scal-ia.fr",
     prenom: "Alexandre",
     nom: "De Sousa",
     societe: "Adisco",
@@ -106,7 +106,7 @@ const RENDEZ_VOUS_REELS: Array<{
     origine: "OUTBOUND",
   },
   {
-    commercial: "LOUIS",
+    commercialEmail: "louis@scal-ia.fr",
     prenom: "Moayad",
     nom: "Harb",
     societe: "Amnesia Bureau d'Étude",
@@ -116,7 +116,7 @@ const RENDEZ_VOUS_REELS: Array<{
     origine: "OUTBOUND",
   },
   {
-    commercial: "LOUIS",
+    commercialEmail: "louis@scal-ia.fr",
     prenom: "Valentina",
     nom: "Nozzolillo",
     societe: "Abalsia Consulting",
@@ -126,7 +126,7 @@ const RENDEZ_VOUS_REELS: Array<{
     origine: "OUTBOUND",
   },
   {
-    commercial: "LOUIS",
+    commercialEmail: "louis@scal-ia.fr",
     prenom: "Florent",
     nom: "Meric",
     societe: "Kytl Security",
@@ -136,7 +136,7 @@ const RENDEZ_VOUS_REELS: Array<{
     origine: "OUTBOUND",
   },
   {
-    commercial: "LOUIS",
+    commercialEmail: "louis@scal-ia.fr",
     prenom: "Julien",
     nom: "Dargaisse",
     societe: "interview.app",
@@ -146,7 +146,7 @@ const RENDEZ_VOUS_REELS: Array<{
     origine: "OUTBOUND",
   },
   {
-    commercial: "LOUIS",
+    commercialEmail: "louis@scal-ia.fr",
     prenom: "Joan",
     nom: "Rajaonarisoa",
     societe: "AB Plus",
@@ -156,7 +156,7 @@ const RENDEZ_VOUS_REELS: Array<{
     origine: "OUTBOUND",
   },
   {
-    commercial: "LOUIS",
+    commercialEmail: "louis@scal-ia.fr",
     prenom: "Kimkhi",
     nom: "Nguyen",
     societe: "Ou Former",
@@ -166,7 +166,7 @@ const RENDEZ_VOUS_REELS: Array<{
     origine: "OUTBOUND",
   },
   {
-    commercial: "LOUIS",
+    commercialEmail: "louis@scal-ia.fr",
     prenom: "Patrice",
     nom: "Juin",
     societe: "Lcom",
@@ -176,7 +176,7 @@ const RENDEZ_VOUS_REELS: Array<{
     origine: "OUTBOUND",
   },
   {
-    commercial: "LOUIS",
+    commercialEmail: "louis@scal-ia.fr",
     prenom: "Antoine",
     nom: "Dupuis",
     societe: "Rapid Views",
@@ -188,13 +188,19 @@ const RENDEZ_VOUS_REELS: Array<{
 ];
 
 async function seedRendezVous() {
+  const users = await prisma.user.findMany({ where: { role: "ADMIN" } });
+  const idParEmail = new Map(users.map((u) => [u.email, u.id]));
+
   await prisma.rendezVous.deleteMany();
 
   await prisma.rendezVous.createMany({
-    data: RENDEZ_VOUS_REELS.map((rdv) => ({
-      ...rdv,
-      dateRDV: new Date(rdv.dateRDV),
-    })),
+    data: RENDEZ_VOUS_REELS.map(({ commercialEmail, ...rdv }) => {
+      const commercialId = idParEmail.get(commercialEmail);
+      if (!commercialId) {
+        throw new Error(`Utilisateur introuvable pour ${commercialEmail} — lance seedUsers() d'abord.`);
+      }
+      return { ...rdv, commercialId, dateRDV: new Date(rdv.dateRDV) };
+    }),
   });
 
   console.log(`${RENDEZ_VOUS_REELS.length} rendez-vous réels importés.`);
