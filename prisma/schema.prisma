@@ -129,6 +129,13 @@ model RendezVous {
   honore   HonoreStatus @default(EN_ATTENTE)
   qualifie Boolean      @default(false)
 
+  // --- Pipeline Kanban : étapes en aval de la qualification, et sortie de pipe ---
+  r2EnAttente Boolean @default(false)
+  dealCloture Boolean @default(false)
+  // Retiré du pipe actif (vue Kanban) sans jamais disparaître du tableau —
+  // préserve honore/qualifie tels quels, récupérable à tout moment.
+  lost        Boolean @default(false)
+
   notes       String?
   compteRendu Json?
   preparation Json?

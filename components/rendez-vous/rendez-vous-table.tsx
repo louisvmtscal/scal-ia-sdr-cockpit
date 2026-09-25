@@ -55,16 +55,19 @@ const HONORE_FILTER_LABELS = {
   TOUS: "Honoré : tous",
   EN_ATTENTE: "Honoré : en attente",
   OUI: "Honoré : oui",
-  NON: "Honoré : non",
   A_REPLACER: "Honoré : à replacer",
 };
 
 /**
  * Vert = honoré et qualifié, orange = à replacer, rouge = non honoré ou
- * honoré sans être qualifié, blanc = en attente. Purement indicatif — la
- * valeur exacte reste toujours lisible dans les colonnes Honoré/Qualifié.
+ * honoré sans être qualifié, blanc = en attente, grisé = sorti du pipe
+ * (Kanban "Lost"). Purement indicatif — la valeur exacte reste toujours
+ * lisible dans les colonnes Honoré/Qualifié.
  */
-function rowToneClass(row: { honore: HonoreStatus; qualifie: boolean }) {
+function rowToneClass(row: { honore: HonoreStatus; qualifie: boolean; lost: boolean }) {
+  if (row.lost) {
+    return "bg-muted/40 opacity-60 hover:bg-muted/60";
+  }
   if (row.honore === "A_REPLACER") {
     return "bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/30 dark:hover:bg-orange-950/50";
   }
@@ -138,7 +141,7 @@ export function RendezVousTable({
   const [filterOrigine, setFilterOrigine] = useState<"TOUTES" | "INBOUND" | "OUTBOUND">("TOUTES");
   const [filterHonore, setFilterHonore] = useState<"TOUS" | HonoreStatus>("TOUS");
   const [sortKey, setSortKey] = useState<SortKey>("dateRDV");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -277,7 +280,6 @@ export function RendezVousTable({
             <SelectItem value="TOUS">Honoré : tous</SelectItem>
             <SelectItem value="EN_ATTENTE">Honoré : en attente</SelectItem>
             <SelectItem value="OUI">Honoré : oui</SelectItem>
-            <SelectItem value="NON">Honoré : non</SelectItem>
             <SelectItem value="A_REPLACER">Honoré : à replacer</SelectItem>
           </SelectContent>
         </Select>
@@ -368,7 +370,6 @@ export function RendezVousTable({
                       <SelectContent>
                         <SelectItem value="EN_ATTENTE">En attente</SelectItem>
                         <SelectItem value="OUI">Oui</SelectItem>
-                        <SelectItem value="NON">Non</SelectItem>
                         <SelectItem value="A_REPLACER">À replacer</SelectItem>
                       </SelectContent>
                     </Select>

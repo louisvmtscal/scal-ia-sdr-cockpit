@@ -9,55 +9,28 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
+import { Trash2Icon } from "lucide-react";
 import { useOptimistic, useTransition } from "react";
 import { toast } from "sonner";
 
-import { toggleQualifieAction, updateHonoreAction } from "@/actions/rendez-vous";
+import { moveKanbanCardAction, restoreFromLostAction } from "@/actions/rendez-vous";
 import { Badge } from "@/components/ui/badge";
 import { ORIGINE_LABELS } from "@/lib/constants/rendez-vous";
-import type { HonoreStatus } from "@/lib/generated/prisma/enums";
+import { columnIdFor, KANBAN_COLUMNS, type KanbanColumnId } from "@/lib/kanban-columns";
 import { cn } from "@/lib/utils";
 import { formatRelativeDate } from "@/utils/format";
 
 import type { RendezVousAvecCommercial } from "./rendez-vous-table";
 
-type ColumnId = "EN_ATTENTE" | "A_REPLACER" | "NON" | "HONORE" | "QUALIFIE";
+const LOST_COLUMN = { id: "LOST" as const, label: "Lost", toneClass: "border-t-muted-foreground/40" };
 
-const COLUMNS: {
-  id: ColumnId;
-  label: string;
-  honore: HonoreStatus;
-  qualifie: boolean;
-  toneClass: string;
-}[] = [
-  { id: "EN_ATTENTE", label: "En attente", honore: "EN_ATTENTE", qualifie: false, toneClass: "" },
-  {
-    id: "A_REPLACER",
-    label: "À replacer",
-    honore: "A_REPLACER",
-    qualifie: false,
-    toneClass: "border-t-orange-400",
-  },
-  { id: "NON", label: "Non honoré", honore: "NON", qualifie: false, toneClass: "border-t-red-400" },
-  { id: "HONORE", label: "Honoré", honore: "OUI", qualifie: false, toneClass: "" },
-  {
-    id: "QUALIFIE",
-    label: "Qualifié",
-    honore: "OUI",
-    qualifie: true,
-    toneClass: "border-t-green-400",
-  },
-];
-
-function columnIdFor(row: { honore: HonoreStatus; qualifie: boolean }): ColumnId {
-  if (row.honore === "EN_ATTENTE") return "EN_ATTENTE";
-  if (row.honore === "A_REPLACER") return "A_REPLACER";
-  if (row.honore === "NON") return "NON";
-  if (row.honore === "OUI" && row.qualifie) return "QUALIFIE";
-  return "HONORE";
-}
-
-function RendezVousCard({ row }: { row: RendezVousAvecCommercial }) {
+function RendezVousCard({
+  row,
+  onRestore,
+}: {
+  row: RendezVousAvecCommercial;
+  onRestore?: () => void;
+}) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: row.id,
   });
@@ -75,11 +48,25 @@ function RendezVousCard({ row }: { row: RendezVousAvecCommercial }) {
       className={cn(
         "bg-card cursor-grab touch-none rounded-lg border p-3 shadow-xs active:cursor-grabbing",
         isDragging && "opacity-50",
+        row.lost && "opacity-70",
       )}
     >
-      <p className="text-sm font-medium">
-        {row.prenom} {row.nom}
-      </p>
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-sm font-medium">
+          {row.prenom} {row.nom}
+        </p>
+        {onRestore ? (
+          <button
+            type="button"
+            title="Récupérer dans le pipe"
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={onRestore}
+            className="text-muted-foreground hover:text-foreground shrink-0"
+          >
+            <Trash2Icon className="size-3.5" />
+          </button>
+        ) : null}
+      </div>
       <p className="text-muted-foreground text-xs">{row.societe}</p>
       <div className="mt-2 flex items-center justify-between gap-2">
         <span className="text-muted-foreground text-xs">{formatRelativeDate(row.dateRDV)}</span>
@@ -95,18 +82,24 @@ function RendezVousCard({ row }: { row: RendezVousAvecCommercial }) {
 }
 
 function KanbanColumn({
-  column,
+  id,
+  label,
+  toneClass,
   rows,
+  onRestore,
 }: {
-  column: (typeof COLUMNS)[number];
+  id: KanbanColumnId;
+  label: string;
+  toneClass: string;
   rows: RendezVousAvecCommercial[];
+  onRestore?: (id: string) => void;
 }) {
-  const { setNodeRef, isOver } = useDroppable({ id: column.id });
+  const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
     <div className="flex w-72 shrink-0 flex-col gap-2">
-      <div className={cn("flex items-center justify-between border-t-2 px-1 pt-2", column.toneClass)}>
-        <h3 className="text-sm font-semibold">{column.label}</h3>
+      <div className={cn("flex items-center justify-between border-t-2 px-1 pt-2", toneClass)}>
+        <h3 className="text-sm font-semibold">{label}</h3>
         <span className="text-muted-foreground text-xs">{rows.length}</span>
       </div>
       <div
@@ -117,7 +110,11 @@ function KanbanColumn({
         )}
       >
         {rows.map((row) => (
-          <RendezVousCard key={row.id} row={row} />
+          <RendezVousCard
+            key={row.id}
+            row={row}
+            onRestore={onRestore ? () => onRestore(row.id) : undefined}
+          />
         ))}
         {rows.length === 0 ? (
           <p className="text-muted-foreground p-3 text-center text-xs">Aucun RDV</p>
@@ -127,36 +124,58 @@ function KanbanColumn({
   );
 }
 
+function sortByDateAsc(rows: RendezVousAvecCommercial[]) {
+  return [...rows].sort((a, b) => a.dateRDV.getTime() - b.dateRDV.getTime());
+}
+
 export function RendezVousKanban({ data }: { data: RendezVousAvecCommercial[] }) {
   const [optimisticData, setOptimisticData] = useOptimistic(
     data,
-    (state, patch: { id: string; honore: HonoreStatus; qualifie: boolean }) =>
-      state.map((row) =>
-        row.id === patch.id ? { ...row, honore: patch.honore, qualifie: patch.qualifie } : row,
-      ),
+    (
+      state,
+      patch: { id: string; columnId: KanbanColumnId } | { id: string; restore: true },
+    ) => {
+      if ("restore" in patch) {
+        return state.map((row) => (row.id === patch.id ? { ...row, lost: false } : row));
+      }
+      if (patch.columnId === "LOST") {
+        return state.map((row) => (row.id === patch.id ? { ...row, lost: true } : row));
+      }
+      const column = KANBAN_COLUMNS.find((c) => c.id === patch.columnId);
+      if (!column) return state;
+      return state.map((row) =>
+        row.id === patch.id ? { ...row, ...column.fields, lost: false } : row,
+      );
+    },
   );
   const [, startTransition] = useTransition();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   function handleDragEnd(event: DragEndEvent) {
-    const targetColumnId = event.over?.id as ColumnId | undefined;
+    const targetColumnId = event.over?.id as KanbanColumnId | undefined;
     if (!targetColumnId) return;
 
     const row = optimisticData.find((r) => r.id === event.active.id);
     if (!row) return;
-
-    const target = COLUMNS.find((c) => c.id === targetColumnId);
-    if (!target || columnIdFor(row) === target.id) return;
+    if (columnIdFor(row) === targetColumnId) return;
 
     startTransition(async () => {
-      setOptimisticData({ id: row.id, honore: target.honore, qualifie: target.qualifie });
+      setOptimisticData({ id: row.id, columnId: targetColumnId });
       try {
-        await updateHonoreAction(row.id, target.honore);
-        if (target.qualifie !== row.qualifie) {
-          await toggleQualifieAction(row.id, target.qualifie);
-        }
+        await moveKanbanCardAction(row.id, targetColumnId);
       } catch {
         toast.error("La mise à jour a échoué.");
+      }
+    });
+  }
+
+  function handleRestore(id: string) {
+    startTransition(async () => {
+      setOptimisticData({ id, restore: true });
+      try {
+        await restoreFromLostAction(id);
+      } catch {
+        toast.error("La récupération a échoué.");
       }
     });
   }
@@ -164,13 +183,22 @@ export function RendezVousKanban({ data }: { data: RendezVousAvecCommercial[] })
   return (
     <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
       <div className="flex gap-4 overflow-x-auto pb-2">
-        {COLUMNS.map((column) => (
+        {KANBAN_COLUMNS.map((column) => (
           <KanbanColumn
             key={column.id}
-            column={column}
-            rows={optimisticData.filter((row) => columnIdFor(row) === column.id)}
+            id={column.id}
+            label={column.label}
+            toneClass={column.toneClass}
+            rows={sortByDateAsc(optimisticData.filter((row) => columnIdFor(row) === column.id))}
           />
         ))}
+        <KanbanColumn
+          id={LOST_COLUMN.id}
+          label={LOST_COLUMN.label}
+          toneClass={LOST_COLUMN.toneClass}
+          rows={sortByDateAsc(optimisticData.filter((row) => columnIdFor(row) === "LOST"))}
+          onRestore={handleRestore}
+        />
       </div>
     </DndContext>
   );
