@@ -55,6 +55,7 @@ const HONORE_FILTER_LABELS = {
   TOUS: "Honoré : tous",
   EN_ATTENTE: "Honoré : en attente",
   OUI: "Honoré : oui",
+  NON: "Honoré : non",
   A_REPLACER: "Honoré : à replacer",
 };
 
@@ -280,6 +281,7 @@ export function RendezVousTable({
             <SelectItem value="TOUS">Honoré : tous</SelectItem>
             <SelectItem value="EN_ATTENTE">Honoré : en attente</SelectItem>
             <SelectItem value="OUI">Honoré : oui</SelectItem>
+            <SelectItem value="NON">Honoré : non</SelectItem>
             <SelectItem value="A_REPLACER">Honoré : à replacer</SelectItem>
           </SelectContent>
         </Select>
@@ -370,6 +372,7 @@ export function RendezVousTable({
                       <SelectContent>
                         <SelectItem value="EN_ATTENTE">En attente</SelectItem>
                         <SelectItem value="OUI">Oui</SelectItem>
+                        <SelectItem value="NON">Non</SelectItem>
                         <SelectItem value="A_REPLACER">À replacer</SelectItem>
                       </SelectContent>
                     </Select>

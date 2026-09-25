@@ -121,11 +121,7 @@ export async function updateHonoreAction(id: string, honore: HonoreStatus) {
   const parsed = honoreStatusSchema.safeParse(honore);
   if (!parsed.success) return;
 
-  // "Non honoré" est déprécié au profit de "À replacer" (voir migration) :
-  // un no-show se retraite en tentative de reprog, jamais en cul-de-sac.
-  const honoreFinal = parsed.data === "NON" ? "A_REPLACER" : parsed.data;
-
-  await prisma.rendezVous.update({ where: { id }, data: { honore: honoreFinal } });
+  await prisma.rendezVous.update({ where: { id }, data: { honore: parsed.data } });
   revalidateRendezVous();
 }
 

@@ -21,9 +21,8 @@ function normalize(value: string) {
 function mapHonore(value: string): HonoreStatus {
   const v = value.toLowerCase();
   if (v === "oui") return "OUI";
-  // "Non honoré" est déprécié au profit de "À replacer" (voir actions/rendez-vous.ts) :
-  // un no-show se retraite en tentative de reprog, jamais en cul-de-sac.
-  if (v === "non" || v.includes("reprog")) return "A_REPLACER";
+  if (v === "non") return "NON";
+  if (v.includes("reprog")) return "A_REPLACER";
   return "EN_ATTENTE";
 }
 
