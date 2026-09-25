@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarCheck2Icon, LayoutDashboardIcon, ZapIcon } from "lucide-react";
+import { CalendarCheck2Icon, LayoutDashboardIcon, SettingsIcon, ZapIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentProps } from "react";
@@ -22,6 +22,7 @@ const NAV_ITEMS = [
   { title: "Tableau de bord", url: "/", icon: LayoutDashboardIcon },
   { title: "Rendez-vous", url: "/rendez-vous", icon: CalendarCheck2Icon },
   { title: "Automatisations", url: "/automatisations", icon: ZapIcon },
+  { title: "Paramètres", url: "/parametres", icon: SettingsIcon },
 ];
 
 export function AppSidebar({
@@ -31,7 +32,11 @@ export function AppSidebar({
   user: { name?: string | null; email?: string | null; role: string };
 }) {
   const pathname = usePathname();
-  const navItems = NAV_ITEMS.filter((item) => item.url !== "/automatisations" || user.role !== "SDR");
+  const navItems = NAV_ITEMS.filter((item) => {
+    if (item.url === "/automatisations") return user.role !== "SDR";
+    if (item.url === "/parametres") return user.role === "ADMIN";
+    return true;
+  });
 
   return (
     <Sidebar collapsible="icon" {...props}>
