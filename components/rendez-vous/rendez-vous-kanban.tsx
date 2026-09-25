@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  closestCenter,
   DndContext,
   PointerSensor,
   useDraggable,
@@ -105,8 +106,8 @@ function KanbanColumn({
       <div
         ref={setNodeRef}
         className={cn(
-          "flex min-h-24 flex-col gap-2 rounded-lg p-1 transition-colors",
-          isOver && "bg-muted/60",
+          "flex min-h-[22rem] flex-col gap-2 rounded-lg p-1 transition-colors",
+          isOver && "bg-muted/60 ring-primary/40 ring-2",
         )}
       >
         {rows.map((row) => (
@@ -117,7 +118,7 @@ function KanbanColumn({
           />
         ))}
         {rows.length === 0 ? (
-          <p className="text-muted-foreground p-3 text-center text-xs">Aucun RDV</p>
+          <p className="text-muted-foreground p-3 text-center text-xs">Dépose un RDV ici</p>
         ) : null}
       </div>
     </div>
@@ -181,7 +182,7 @@ export function RendezVousKanban({ data }: { data: RendezVousAvecCommercial[] })
   }
 
   return (
-    <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
       <div className="flex gap-4 overflow-x-auto pb-2">
         {KANBAN_COLUMNS.map((column) => (
           <KanbanColumn
