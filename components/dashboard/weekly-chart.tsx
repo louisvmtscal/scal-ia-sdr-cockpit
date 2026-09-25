@@ -7,7 +7,7 @@ import type { ChartConfig } from "@/components/ui/chart";
 
 const chartConfig: ChartConfig = {
   rendezVous: {
-    label: "Rendez-vous",
+    label: "RDV bookés",
     color: "var(--chart-1)",
   },
 };

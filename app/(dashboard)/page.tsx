@@ -1,21 +1,18 @@
 import {
   CalendarDaysIcon,
   CalendarIcon,
-  CalendarRangeIcon,
   CheckCircle2Icon,
   CoinsIcon,
   GaugeIcon,
   PiggyBankIcon,
   RefreshCcwIcon,
   TargetIcon,
-  TrendingUpIcon,
   XCircleIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 import { redirect } from "next/navigation";
 
-import { CommercialChart } from "@/components/dashboard/commercial-chart";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { WeeklyChart } from "@/components/dashboard/weekly-chart";
 import { FadeIn } from "@/components/shared/fade-in";
@@ -25,7 +22,6 @@ import { auth } from "@/lib/auth";
 import { ORIGINE_LABELS } from "@/lib/constants/rendez-vous";
 import type { RendezVous } from "@/lib/generated/prisma/client";
 import {
-  getCommercialComparison,
   getDashboardStats,
   getRelancesNecessaires,
   getUpcomingRendezVous,
@@ -85,12 +81,10 @@ export default async function DashboardPage() {
     redirect("/connexion");
   }
   const scope = { userId: session.user.id, role: session.user.role };
-  const estAdminOuManager = scope.role === "ADMIN" || scope.role === "MANAGER";
 
-  const [stats, weeklySeries, commercialComparison, upcoming, relances] = await Promise.all([
+  const [stats, weeklySeries, upcoming, relances] = await Promise.all([
     getDashboardStats(scope),
     getWeeklySeries(scope),
-    estAdminOuManager ? getCommercialComparison() : Promise.resolve(null),
     getUpcomingRendezVous(scope, 5),
     getRelancesNecessaires(scope),
   ]);
@@ -100,8 +94,6 @@ export default async function DashboardPage() {
   );
 
   const statCards = [
-    { label: "RDV aujourd'hui", value: String(stats.aujourdHui), icon: CalendarDaysIcon },
-    { label: "RDV cette semaine", value: String(stats.cetteSemaine), icon: CalendarRangeIcon },
     { label: "RDV ce mois", value: String(stats.ceMois), icon: CalendarIcon },
     { label: "RDV honorés", value: String(stats.honores), icon: CheckCircle2Icon },
     { label: "RDV non honorés", value: String(stats.nonHonores), icon: XCircleIcon },
@@ -110,12 +102,6 @@ export default async function DashboardPage() {
       label: "Taux de qualification",
       value: formatPercent(stats.tauxQualification),
       icon: TargetIcon,
-    },
-    {
-      label: "ARR potentiel",
-      value: formatCurrency(stats.arrPotentiel),
-      icon: TrendingUpIcon,
-      hint: "31 200 € par RDV qualifié",
     },
     {
       label: "💰 Mes primes",
@@ -147,30 +133,16 @@ export default async function DashboardPage() {
         ))}
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-2">
-        <FadeIn delay={0.2}>
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Rendez-vous par semaine</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <WeeklyChart data={weeklySeries} />
-            </CardContent>
-          </Card>
-        </FadeIn>
-        {commercialComparison ? (
-          <FadeIn delay={0.25}>
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Comparatif par commercial</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CommercialChart data={commercialComparison} />
-              </CardContent>
-            </Card>
-          </FadeIn>
-        ) : null}
-      </div>
+      <FadeIn delay={0.2}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">RDV bookés par semaine</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <WeeklyChart data={weeklySeries} />
+          </CardContent>
+        </Card>
+      </FadeIn>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <FadeIn delay={0.3}>
