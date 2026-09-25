@@ -8,6 +8,7 @@ import {
   deleteRendezVousAction,
   toggleQualifieAction,
   updateHonoreAction,
+  updateOrigineAction,
 } from "@/actions/rendez-vous";
 import { EmailJ25Dialog } from "@/components/rendez-vous/email-j25-dialog";
 import { FirefliesDialog } from "@/components/rendez-vous/fireflies-dialog";
@@ -33,7 +34,7 @@ import {
 } from "@/components/ui/table";
 import { HONORE_LABELS, ORIGINE_LABELS } from "@/lib/constants/rendez-vous";
 import type { RendezVous } from "@/lib/generated/prisma/client";
-import type { HonoreStatus, Role } from "@/lib/generated/prisma/enums";
+import type { HonoreStatus, Origine, Role } from "@/lib/generated/prisma/enums";
 import type { TeamMember } from "@/lib/team";
 import { formatDateTime } from "@/utils/format";
 
@@ -172,6 +173,13 @@ export function RendezVousTable({
     });
   }
 
+  function handleUpdateOrigine(row: RendezVousAvecCommercial, origine: Origine) {
+    startTransition(async () => {
+      setOptimisticData({ type: "patch", id: row.id, patch: { origine } });
+      await updateOrigineAction(row.id, origine);
+    });
+  }
+
   function handleToggleQualifie(row: RendezVousAvecCommercial, qualifie: boolean) {
     startTransition(async () => {
       setOptimisticData({ type: "patch", id: row.id, patch: { qualifie } });
@@ -299,7 +307,20 @@ export function RendezVousTable({
                 <TableRow key={row.id}>
                   <TableCell className="whitespace-nowrap">{formatDateTime(row.dateRDV)}</TableCell>
                   <TableCell>{row.commercial.name ?? row.commercial.email}</TableCell>
-                  <TableCell>{ORIGINE_LABELS[row.origine]}</TableCell>
+                  <TableCell>
+                    <Select
+                      value={row.origine}
+                      onValueChange={(value) => handleUpdateOrigine(row, value as Origine)}
+                    >
+                      <SelectTrigger className="w-32">
+                        <SelectValue>{(value: string) => ORIGINE_LABELS[value as Origine]}</SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="INBOUND">Inbound</SelectItem>
+                        <SelectItem value="OUTBOUND">Outbound</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
                   <TableCell className="font-medium">{row.societe}</TableCell>
                   <TableCell>{row.nom}</TableCell>
                   <TableCell>{row.prenom}</TableCell>

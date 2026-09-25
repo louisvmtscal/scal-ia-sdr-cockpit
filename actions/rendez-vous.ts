@@ -3,10 +3,11 @@
 import { revalidatePath } from "next/cache";
 
 import { auth } from "@/lib/auth";
-import type { HonoreStatus } from "@/lib/generated/prisma/enums";
+import type { HonoreStatus, Origine } from "@/lib/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
 import {
   honoreStatusSchema,
+  origineSchema,
   rendezVousSchema,
   type RendezVousInput,
 } from "@/lib/validations/rendez-vous";
@@ -125,5 +126,13 @@ export async function updateHonoreAction(id: string, honore: HonoreStatus) {
 
 export async function toggleQualifieAction(id: string, qualifie: boolean) {
   await prisma.rendezVous.update({ where: { id }, data: { qualifie } });
+  revalidateRendezVous();
+}
+
+export async function updateOrigineAction(id: string, origine: Origine) {
+  const parsed = origineSchema.safeParse(origine);
+  if (!parsed.success) return;
+
+  await prisma.rendezVous.update({ where: { id }, data: { origine: parsed.data } });
   revalidateRendezVous();
 }
