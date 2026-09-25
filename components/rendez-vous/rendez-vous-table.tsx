@@ -59,6 +59,24 @@ const HONORE_FILTER_LABELS = {
   A_REPLACER: "Honoré : à replacer",
 };
 
+/**
+ * Vert = honoré et qualifié, orange = à replacer, rouge = non honoré ou
+ * honoré sans être qualifié, blanc = en attente. Purement indicatif — la
+ * valeur exacte reste toujours lisible dans les colonnes Honoré/Qualifié.
+ */
+function rowToneClass(row: { honore: HonoreStatus; qualifie: boolean }) {
+  if (row.honore === "A_REPLACER") {
+    return "bg-orange-50 hover:bg-orange-100 dark:bg-orange-950/30 dark:hover:bg-orange-950/50";
+  }
+  if (row.honore === "OUI" && row.qualifie) {
+    return "bg-green-50 hover:bg-green-100 dark:bg-green-950/30 dark:hover:bg-green-950/50";
+  }
+  if (row.honore === "NON" || (row.honore === "OUI" && !row.qualifie)) {
+    return "bg-red-50 hover:bg-red-100 dark:bg-red-950/30 dark:hover:bg-red-950/50";
+  }
+  return "";
+}
+
 function SortButton({
   label,
   active,
@@ -304,7 +322,7 @@ export function RendezVousTable({
               </TableRow>
             ) : (
               rows.map((row) => (
-                <TableRow key={row.id}>
+                <TableRow key={row.id} className={rowToneClass(row)}>
                   <TableCell className="whitespace-nowrap">{formatDateTime(row.dateRDV)}</TableCell>
                   <TableCell>{row.commercial.name ?? row.commercial.email}</TableCell>
                   <TableCell>

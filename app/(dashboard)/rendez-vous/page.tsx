@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-import { RendezVousTable } from "@/components/rendez-vous/rendez-vous-table";
+import { RendezVousView } from "@/components/rendez-vous/rendez-vous-view";
 import { auth } from "@/lib/auth";
 import { getTeamMembers } from "@/lib/team";
 import { listRendezVous } from "@/services/rendez-vous";
@@ -28,7 +28,7 @@ export default async function RendezVousPage() {
         <h1 className="text-lg font-semibold">Suivi des rendez-vous</h1>
         <p className="text-muted-foreground text-sm">{rendezVous.length} rendez-vous au total</p>
       </div>
-      <RendezVousTable
+      <RendezVousView
         data={rendezVous}
         teamMembers={teamMembers}
         currentUser={{ id: scope.userId, role: scope.role }}

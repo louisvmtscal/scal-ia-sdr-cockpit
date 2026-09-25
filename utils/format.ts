@@ -35,3 +35,20 @@ export function formatDateTime(date: Date) {
 export function formatHeureParis(date: Date) {
   return heureParisFormatter.format(date);
 }
+
+/** Date relative courte ("dans 3j", "il y a 2h") — pour un scan rapide dans les listes. */
+export function formatRelativeDate(date: Date, now = new Date()) {
+  const diffMs = date.getTime() - now.getTime();
+  const diffMinutes = Math.round(diffMs / 60_000);
+  const diffHours = Math.round(diffMs / 3_600_000);
+  const diffDays = Math.round(diffMs / 86_400_000);
+
+  if (Math.abs(diffMinutes) < 1) return "à l'instant";
+  if (Math.abs(diffMinutes) < 60) {
+    return diffMinutes > 0 ? `dans ${diffMinutes} min` : `il y a ${Math.abs(diffMinutes)} min`;
+  }
+  if (Math.abs(diffHours) < 24) {
+    return diffHours > 0 ? `dans ${diffHours}h` : `il y a ${Math.abs(diffHours)}h`;
+  }
+  return diffDays > 0 ? `dans ${diffDays}j` : `il y a ${Math.abs(diffDays)}j`;
+}

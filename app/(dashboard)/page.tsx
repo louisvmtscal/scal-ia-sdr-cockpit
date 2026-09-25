@@ -27,7 +27,7 @@ import {
   getUpcomingRendezVous,
   getWeeklySeries,
 } from "@/services/rendez-vous";
-import { formatCurrency, formatDateTime, formatPercent } from "@/utils/format";
+import { formatCurrency, formatPercent, formatRelativeDate } from "@/utils/format";
 
 type RendezVousAvecCommercial = RendezVous & { commercial: { name: string | null; email: string } };
 
@@ -62,7 +62,7 @@ function RendezVousMiniList({
                     {item.prenom} {item.nom} · {item.societe}
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    {item.commercial.name ?? item.commercial.email} · {formatDateTime(item.dateRDV)}
+                    {item.commercial.name ?? item.commercial.email} · {formatRelativeDate(item.dateRDV)}
                   </p>
                 </div>
                 <Badge variant="secondary">{ORIGINE_LABELS[item.origine]}</Badge>
