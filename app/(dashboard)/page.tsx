@@ -5,7 +5,6 @@ import {
   CoinsIcon,
   GaugeIcon,
   PiggyBankIcon,
-  RefreshCcwIcon,
   TargetIcon,
   XCircleIcon,
 } from "lucide-react";
@@ -96,15 +95,9 @@ export default async function DashboardPage() {
   const statCards = [
     { label: "RDV ce mois", value: String(stats.ceMois), icon: CalendarIcon },
     {
-      label: "RDV honorés",
-      value: `${stats.honores} / ${stats.ceMoisEcoule}`,
+      label: "RDV honoré et qualifié",
+      value: `${stats.honoreEtQualifie} / ${stats.ceMoisEcoule}`,
       icon: CheckCircle2Icon,
-      hint: "RDV du mois déjà passés à date",
-    },
-    {
-      label: "RDV non honorés",
-      value: `${stats.nonHonores} / ${stats.ceMoisEcoule}`,
-      icon: XCircleIcon,
       hint: "RDV du mois déjà passés à date",
     },
     {
@@ -131,11 +124,6 @@ export default async function DashboardPage() {
       value: formatCurrency(stats.primesPotentielles),
       icon: PiggyBankIcon,
       hint: "RDV en attente",
-    },
-    {
-      label: "RDV à replacer",
-      value: String(stats.aReplacer),
-      icon: RefreshCcwIcon,
     },
   ];
 
