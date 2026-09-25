@@ -32,9 +32,14 @@ export async function getDashboardStats(scope: Scope) {
   const now = new Date();
   const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const startNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+  // "Passé" = ce mois-ci ET déjà arrivé à date — sert de dénominateur pour
+  // honorés/non-honorés, pour ne jamais comparer à un total du mois qui
+  // inclut encore des RDV à venir (voir "RDV honorés" plus bas).
+  const moisEcoule = { gte: startMonth, lte: now };
 
   const [
     ceMois,
+    ceMoisEcoule,
     honores,
     nonHonores,
     aReplacer,
@@ -45,10 +50,11 @@ export async function getDashboardStats(scope: Scope) {
     rdvPotentiels,
   ] = await Promise.all([
     prisma.rendezVous.count({ where: { ...where, dateRDV: { gte: startMonth, lt: startNextMonth } } }),
-    prisma.rendezVous.count({ where: { ...where, honore: "OUI" } }),
-    prisma.rendezVous.count({ where: { ...where, honore: "NON" } }),
+    prisma.rendezVous.count({ where: { ...where, dateRDV: moisEcoule } }),
+    prisma.rendezVous.count({ where: { ...where, honore: "OUI", dateRDV: moisEcoule } }),
+    prisma.rendezVous.count({ where: { ...where, honore: "NON", dateRDV: moisEcoule } }),
     prisma.rendezVous.count({ where: { ...where, honore: "A_REPLACER" } }),
-    prisma.rendezVous.count({ where: { ...where, qualifie: true, honore: "OUI" } }),
+    prisma.rendezVous.count({ where: { ...where, qualifie: true, honore: "OUI", dateRDV: moisEcoule } }),
     prisma.rendezVous.count({ where }),
     prisma.rendezVous.findMany({
       where: {
@@ -81,6 +87,7 @@ export async function getDashboardStats(scope: Scope) {
 
   return {
     ceMois,
+    ceMoisEcoule,
     honores,
     nonHonores,
     aReplacer,

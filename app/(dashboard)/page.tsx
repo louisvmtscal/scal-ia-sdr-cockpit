@@ -95,13 +95,29 @@ export default async function DashboardPage() {
 
   const statCards = [
     { label: "RDV ce mois", value: String(stats.ceMois), icon: CalendarIcon },
-    { label: "RDV honorés", value: String(stats.honores), icon: CheckCircle2Icon },
-    { label: "RDV non honorés", value: String(stats.nonHonores), icon: XCircleIcon },
-    { label: "Taux de présence", value: formatPercent(stats.tauxPresence), icon: GaugeIcon },
+    {
+      label: "RDV honorés",
+      value: `${stats.honores} / ${stats.ceMoisEcoule}`,
+      icon: CheckCircle2Icon,
+      hint: "RDV du mois déjà passés à date",
+    },
+    {
+      label: "RDV non honorés",
+      value: `${stats.nonHonores} / ${stats.ceMoisEcoule}`,
+      icon: XCircleIcon,
+      hint: "RDV du mois déjà passés à date",
+    },
+    {
+      label: "Taux de présence",
+      value: formatPercent(stats.tauxPresence),
+      icon: GaugeIcon,
+      hint: "Sur les RDV du mois déjà passés à date",
+    },
     {
       label: "Taux de qualification",
       value: formatPercent(stats.tauxQualification),
       icon: TargetIcon,
+      hint: "Sur les RDV du mois déjà passés à date",
     },
     {
       label: "💰 Mes primes",
