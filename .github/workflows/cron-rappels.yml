@@ -1,4 +1,4 @@
-name: Rappels RDV (jour J + WhatsApp)
+name: Rappels RDV (jour J + WhatsApp + veille)
 
 # Declenche les routes cron qui ont besoin d'une frequence < 1x/jour
 # (impossible nativement sur le plan Vercel Hobby, voir vercel.json pour
@@ -19,3 +19,6 @@ jobs:
       - name: Rappels WhatsApp
         run: |
           curl -sf -o /dev/null -w "whatsapp: HTTP %{http_code}\n" -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.CRON_BASE_URL }}/api/cron/whatsapp"
+      - name: Rappel veille (17h) par email
+        run: |
+          curl -sf -o /dev/null -w "rappel-veille: HTTP %{http_code}\n" -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.CRON_BASE_URL }}/api/cron/rappel-veille"
