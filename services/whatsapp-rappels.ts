@@ -87,7 +87,10 @@ type ResultatRappel = { rendezVousId: string; type: TypeRappel; statut: "SENT" |
  * campagne Lemlist dédiée, envoie le message WhatsApp, enregistre le
  * résultat.
  */
-async function traiterRappel(rendezVous: RendezVousAvecCommercial, type: TypeRappel): Promise<ResultatRappel> {
+async function traiterRappel(
+  rendezVous: RendezVousAvecCommercial,
+  type: TypeRappel,
+): Promise<ResultatRappel> {
   async function marquerEchec(error: string, campaignId?: string) {
     await prisma.rendezVous.update({
       where: { id: rendezVous.id },
@@ -123,7 +126,10 @@ async function traiterRappel(rendezVous: RendezVousAvecCommercial, type: TypeRap
     return marquerEchec(`${variable} manquante.`);
   }
 
-  const message = type === "J1" ? renderMessageJ1(rendezVous.prenom, rendezVous.dateRDV) : renderMessageH2(rendezVous.prenom);
+  const message =
+    type === "J1"
+      ? renderMessageJ1(rendezVous.prenom, rendezVous.dateRDV)
+      : renderMessageH2(rendezVous.prenom);
 
   let leadId: string;
   let contactId: string | null;
@@ -157,8 +163,16 @@ async function traiterRappel(rendezVous: RendezVousAvecCommercial, type: TypeRap
     where: { id: rendezVous.id },
     data:
       type === "J1"
-        ? { whatsappJ1Status: "QUEUED", whatsappJ1CampaignId: campaignId, whatsappJ1ExternalId: leadId }
-        : { whatsappH2Status: "QUEUED", whatsappH2CampaignId: campaignId, whatsappH2ExternalId: leadId },
+        ? {
+            whatsappJ1Status: "QUEUED",
+            whatsappJ1CampaignId: campaignId,
+            whatsappJ1ExternalId: leadId,
+          }
+        : {
+            whatsappH2Status: "QUEUED",
+            whatsappH2CampaignId: campaignId,
+            whatsappH2ExternalId: leadId,
+          },
   });
 
   const result = await sendWhatsappMessage({

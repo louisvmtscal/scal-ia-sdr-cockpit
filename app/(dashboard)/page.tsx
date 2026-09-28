@@ -61,7 +61,8 @@ function RendezVousMiniList({
                     {item.prenom} {item.nom} · {item.societe}
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    {item.commercial.name ?? item.commercial.email} · {formatRelativeDate(item.dateRDV)}
+                    {item.commercial.name ?? item.commercial.email} ·{" "}
+                    {formatRelativeDate(item.dateRDV)}
                   </p>
                 </div>
                 <Badge variant="secondary">{ORIGINE_LABELS[item.origine]}</Badge>

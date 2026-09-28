@@ -21,9 +21,15 @@ export function SyncSheetButton() {
       }
 
       const { crees, misAJour, inchanges, ignores } = result.result;
-      toast.success(`Sheet synchronisé : ${crees} créés, ${misAJour} mis à jour, ${inchanges} inchangés.`, {
-        description: ignores.length > 0 ? `${ignores.length} ligne(s) ignorée(s) (date invalide).` : undefined,
-      });
+      toast.success(
+        `Sheet synchronisé : ${crees} créés, ${misAJour} mis à jour, ${inchanges} inchangés.`,
+        {
+          description:
+            ignores.length > 0
+              ? `${ignores.length} ligne(s) ignorée(s) (date invalide).`
+              : undefined,
+        },
+      );
     });
   }
 

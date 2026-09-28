@@ -48,11 +48,15 @@ export async function getDashboardStats(scope: Scope) {
     rdvPrimablesTotal,
     rdvPotentiels,
   ] = await Promise.all([
-    prisma.rendezVous.count({ where: { ...where, dateRDV: { gte: startMonth, lt: startNextMonth } } }),
+    prisma.rendezVous.count({
+      where: { ...where, dateRDV: { gte: startMonth, lt: startNextMonth } },
+    }),
     prisma.rendezVous.count({ where: { ...where, dateRDV: moisEcoule } }),
     prisma.rendezVous.count({ where: { ...where, honore: "OUI", dateRDV: moisEcoule } }),
     prisma.rendezVous.count({ where: { ...where, honore: "NON", dateRDV: moisEcoule } }),
-    prisma.rendezVous.count({ where: { ...where, qualifie: true, honore: "OUI", dateRDV: moisEcoule } }),
+    prisma.rendezVous.count({
+      where: { ...where, qualifie: true, honore: "OUI", dateRDV: moisEcoule },
+    }),
     prisma.rendezVous.count({ where }),
     prisma.rendezVous.findMany({
       where: {

@@ -33,14 +33,6 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -264,8 +256,8 @@ function CompteRenduBlock({
               <AlertDialogTrigger
                 render={
                   <Button size="sm" variant="outline" disabled={isPending}>
-                    {isPending ? <Loader2Icon className="animate-spin" /> : <RefreshCwIcon />}
-                    ↻ Régénérer
+                    {isPending ? <Loader2Icon className="animate-spin" /> : <RefreshCwIcon />}↻
+                    Régénérer
                   </Button>
                 }
               />
@@ -299,9 +291,9 @@ function CompteRenduBlock({
   );
 }
 
-export function FirefliesDialog({
+/** Contenu du panneau Fireflies & compte rendu — utilisé dans le panneau détail unifié du RDV. */
+export function FirefliesSection({
   rendezVousId,
-  label,
   societe,
   dateRDV,
   firefliesMeetingId,
@@ -311,7 +303,6 @@ export function FirefliesDialog({
   compteRendu: initialCompteRendu,
 }: {
   rendezVousId: string;
-  label: string;
   societe: string;
   dateRDV: Date;
   firefliesMeetingId: string | null;
@@ -329,13 +320,6 @@ export function FirefliesDialog({
     parsedCompteRendu.success ? parsedCompteRendu.data : null,
   );
   const [isPending, startTransition] = useTransition();
-
-  function reinitialiser() {
-    setVue("recherche");
-    setRecherche(societe);
-    setResultats(null);
-    setTranscript(null);
-  }
 
   function handleRechercher() {
     startTransition(async () => {
@@ -385,200 +369,187 @@ export function FirefliesDialog({
   }
 
   return (
-    <Dialog onOpenChange={(open) => !open && reinitialiser()}>
-      <DialogTrigger
-        render={
-          <Button variant="ghost" size="icon-sm">
-            <SearchIcon />
-            <span className="sr-only">Fireflies</span>
-          </Button>
-        }
-      />
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Fireflies — {label}</DialogTitle>
-          <DialogDescription>
-            Recherche une réunion Fireflies.ai correspondante et consulte sa transcription.
-          </DialogDescription>
-        </DialogHeader>
+    <div className="flex flex-col gap-3">
+      <p className="text-muted-foreground text-xs">
+        Recherche une réunion Fireflies.ai correspondante et consulte sa transcription.
+      </p>
 
-        {firefliesMeetingId && vue === "recherche" ? (
-          <div className="flex flex-col gap-3 rounded-lg border p-4">
-            <p className="text-sm font-medium">Réunion déjà liée</p>
-            <div>
-              <p className="text-sm">{firefliesMeetingTitle ?? "Réunion Fireflies"}</p>
-              {firefliesMeetingDate ? (
-                <p className="text-muted-foreground text-xs">{formatDate(firefliesMeetingDate)}</p>
-              ) : null}
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button size="sm" onClick={handleVoirTranscriptionLiee} disabled={isPending}>
-                {isPending ? <Loader2Icon className="animate-spin" /> : null}
-                Voir la transcription
-              </Button>
-              {firefliesMeetingUrl ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  render={<a href={firefliesMeetingUrl} target="_blank" rel="noopener noreferrer" />}
-                >
-                  <ExternalLinkIcon />
-                  Ouvrir dans Fireflies
-                </Button>
-              ) : null}
-              <Button size="sm" variant="ghost" onClick={() => setVue("resultats")}>
-                Rechercher une autre réunion
-              </Button>
-            </div>
+      {firefliesMeetingId && vue === "recherche" ? (
+        <div className="flex flex-col gap-3 rounded-lg border p-4">
+          <p className="text-sm font-medium">Réunion déjà liée</p>
+          <div>
+            <p className="text-sm">{firefliesMeetingTitle ?? "Réunion Fireflies"}</p>
+            {firefliesMeetingDate ? (
+              <p className="text-muted-foreground text-xs">{formatDate(firefliesMeetingDate)}</p>
+            ) : null}
           </div>
-        ) : null}
+          <div className="flex flex-wrap gap-2">
+            <Button size="sm" onClick={handleVoirTranscriptionLiee} disabled={isPending}>
+              {isPending ? <Loader2Icon className="animate-spin" /> : null}
+              Voir la transcription
+            </Button>
+            {firefliesMeetingUrl ? (
+              <Button
+                size="sm"
+                variant="outline"
+                render={<a href={firefliesMeetingUrl} target="_blank" rel="noopener noreferrer" />}
+              >
+                <ExternalLinkIcon />
+                Ouvrir dans Fireflies
+              </Button>
+            ) : null}
+            <Button size="sm" variant="ghost" onClick={() => setVue("resultats")}>
+              Rechercher une autre réunion
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
-        {vue === "recherche" && !firefliesMeetingId ? (
-          <div className="flex flex-col gap-3">
-            <p className="text-sm font-medium">Rechercher la réunion</p>
-            <div className="flex gap-2">
+      {vue === "recherche" && !firefliesMeetingId ? (
+        <div className="flex flex-col gap-3">
+          <p className="text-sm font-medium">Rechercher la réunion</p>
+          <div className="flex gap-2">
+            <Input
+              value={recherche}
+              onChange={(event) => setRecherche(event.target.value)}
+              placeholder="Nom de l'entreprise..."
+            />
+            <Button onClick={handleRechercher} disabled={isPending}>
+              {isPending ? <Loader2Icon className="animate-spin" /> : <SearchIcon />}
+              Rechercher
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {vue === "resultats" ? (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex flex-1 gap-2">
               <Input
                 value={recherche}
                 onChange={(event) => setRecherche(event.target.value)}
                 placeholder="Nom de l'entreprise..."
               />
-              <Button onClick={handleRechercher} disabled={isPending}>
+              <Button onClick={handleRechercher} disabled={isPending} size="sm">
                 {isPending ? <Loader2Icon className="animate-spin" /> : <SearchIcon />}
                 Rechercher
               </Button>
             </div>
           </div>
-        ) : null}
 
-        {vue === "resultats" ? (
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex flex-1 gap-2">
-                <Input
-                  value={recherche}
-                  onChange={(event) => setRecherche(event.target.value)}
-                  placeholder="Nom de l'entreprise..."
-                />
-                <Button onClick={handleRechercher} disabled={isPending} size="sm">
-                  {isPending ? <Loader2Icon className="animate-spin" /> : <SearchIcon />}
-                  Rechercher
-                </Button>
-              </div>
-            </div>
-
-            {resultats && resultats.length === 0 ? (
-              <p className="text-muted-foreground py-6 text-center text-sm">
-                Aucune réunion Fireflies trouvée pour « {recherche} ».
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {resultats?.map((meeting) => (
-                  <li key={meeting.id} className="rounded-lg border p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium">{meeting.title}</p>
-                        <p className="text-muted-foreground text-xs">
-                          {meeting.date ? formatDate(meeting.date) : "Date inconnue"}
-                          {formatDuree(meeting.durationMinutes)
-                            ? ` · ${formatDuree(meeting.durationMinutes)}`
-                            : ""}
+          {resultats && resultats.length === 0 ? (
+            <p className="text-muted-foreground py-6 text-center text-sm">
+              Aucune réunion Fireflies trouvée pour « {recherche} ».
+            </p>
+          ) : (
+            <ul className="flex flex-col gap-2">
+              {resultats?.map((meeting) => (
+                <li key={meeting.id} className="rounded-lg border p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{meeting.title}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {meeting.date ? formatDate(meeting.date) : "Date inconnue"}
+                        {formatDuree(meeting.durationMinutes)
+                          ? ` · ${formatDuree(meeting.durationMinutes)}`
+                          : ""}
+                      </p>
+                      {formatParticipants(meeting) ? (
+                        <p className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
+                          <UsersIcon className="size-3" />
+                          {formatParticipants(meeting)}
                         </p>
-                        {formatParticipants(meeting) ? (
-                          <p className="text-muted-foreground mt-1 flex items-center gap-1 text-xs">
-                            <UsersIcon className="size-3" />
-                            {formatParticipants(meeting)}
-                          </p>
-                        ) : null}
-                      </div>
-                      <div className="flex shrink-0 gap-1">
-                        {meeting.transcriptUrl ? (
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            render={
-                              <a
-                                href={meeting.transcriptUrl}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              />
-                            }
-                          >
-                            <ExternalLinkIcon />
-                            <span className="sr-only">Ouvrir dans Fireflies</span>
-                          </Button>
-                        ) : null}
-                      </div>
+                      ) : null}
                     </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="mt-2"
-                      onClick={() => handleSelectionner(meeting.id)}
-                      disabled={isPending}
-                    >
-                      {isPending ? <Loader2Icon className="animate-spin" /> : null}
-                      Voir la transcription
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        ) : null}
-
-        {vue === "transcription" && transcript ? (
-          <div className="flex flex-col gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="self-start"
-              onClick={() => setVue(firefliesMeetingId ? "recherche" : "resultats")}
-            >
-              <ArrowLeftIcon />
-              Retour
-            </Button>
-
-            <div>
-              <p className="text-sm font-medium">{transcript.meeting.title}</p>
-              <p className="text-muted-foreground text-xs">
-                {transcript.meeting.date ? formatDate(transcript.meeting.date) : "Date inconnue"}
-                {formatParticipants(transcript.meeting)
-                  ? ` · ${formatParticipants(transcript.meeting)}`
-                  : ""}
-              </p>
-            </div>
-
-            <Button size="sm" variant="outline" onClick={handleCopy} className="self-start">
-              <CopyIcon />
-              Copier la transcription
-            </Button>
-
-            {transcript.sentences.length === 0 ? (
-              <p className="text-muted-foreground py-6 text-center text-sm">
-                Cette réunion n&apos;a pas (encore) de transcription disponible.
-              </p>
-            ) : (
-              <div className="bg-muted flex max-h-96 flex-col gap-3 overflow-y-auto rounded-md p-4">
-                {regrouperParLocuteur(transcript).map((groupe, index) => (
-                  <div key={index}>
-                    <p className="text-xs font-semibold">{groupe.speakerName}</p>
-                    <p className="text-sm whitespace-pre-line">{groupe.texte}</p>
+                    <div className="flex shrink-0 gap-1">
+                      {meeting.transcriptUrl ? (
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          render={
+                            <a
+                              href={meeting.transcriptUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            />
+                          }
+                        >
+                          <ExternalLinkIcon />
+                          <span className="sr-only">Ouvrir dans Fireflies</span>
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
-                ))}
-              </div>
-            )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-2"
+                    onClick={() => handleSelectionner(meeting.id)}
+                    disabled={isPending}
+                  >
+                    {isPending ? <Loader2Icon className="animate-spin" /> : null}
+                    Voir la transcription
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : null}
 
-            <CompteRenduBlock
-              rendezVousId={rendezVousId}
-              societe={societe}
-              dateRDV={dateRDV}
-              transcript={transcript}
-              compteRendu={compteRendu}
-              onUpdate={setCompteRendu}
-            />
+      {vue === "transcription" && transcript ? (
+        <div className="flex flex-col gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="self-start"
+            onClick={() => setVue(firefliesMeetingId ? "recherche" : "resultats")}
+          >
+            <ArrowLeftIcon />
+            Retour
+          </Button>
+
+          <div>
+            <p className="text-sm font-medium">{transcript.meeting.title}</p>
+            <p className="text-muted-foreground text-xs">
+              {transcript.meeting.date ? formatDate(transcript.meeting.date) : "Date inconnue"}
+              {formatParticipants(transcript.meeting)
+                ? ` · ${formatParticipants(transcript.meeting)}`
+                : ""}
+            </p>
           </div>
-        ) : null}
-      </DialogContent>
-    </Dialog>
+
+          <Button size="sm" variant="outline" onClick={handleCopy} className="self-start">
+            <CopyIcon />
+            Copier la transcription
+          </Button>
+
+          {transcript.sentences.length === 0 ? (
+            <p className="text-muted-foreground py-6 text-center text-sm">
+              Cette réunion n&apos;a pas (encore) de transcription disponible.
+            </p>
+          ) : (
+            <div className="bg-muted flex max-h-96 flex-col gap-3 overflow-y-auto rounded-md p-4">
+              {regrouperParLocuteur(transcript).map((groupe, index) => (
+                <div key={index}>
+                  <p className="text-xs font-semibold">{groupe.speakerName}</p>
+                  <p className="text-sm whitespace-pre-line">{groupe.texte}</p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <CompteRenduBlock
+            rendezVousId={rendezVousId}
+            societe={societe}
+            dateRDV={dateRDV}
+            transcript={transcript}
+            compteRendu={compteRendu}
+            onUpdate={setCompteRendu}
+          />
+        </div>
+      ) : null}
+    </div>
   );
 }

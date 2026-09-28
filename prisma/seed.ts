@@ -197,7 +197,9 @@ async function seedRendezVous() {
     data: RENDEZ_VOUS_REELS.map(({ commercialEmail, ...rdv }) => {
       const commercialId = idParEmail.get(commercialEmail);
       if (!commercialId) {
-        throw new Error(`Utilisateur introuvable pour ${commercialEmail} — lance seedUsers() d'abord.`);
+        throw new Error(
+          `Utilisateur introuvable pour ${commercialEmail} — lance seedUsers() d'abord.`,
+        );
       }
       return { ...rdv, commercialId, dateRDV: new Date(rdv.dateRDV) };
     }),

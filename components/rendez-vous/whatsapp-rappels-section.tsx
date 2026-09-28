@@ -17,12 +17,13 @@ const STATUT_LABELS: Record<WhatsappStatus, string> = {
   FAILED: "Échec",
 };
 
-const STATUT_VARIANTS: Record<WhatsappStatus, "secondary" | "outline" | "default" | "destructive"> = {
-  PENDING: "secondary",
-  QUEUED: "outline",
-  SENT: "default",
-  FAILED: "destructive",
-};
+const STATUT_VARIANTS: Record<WhatsappStatus, "secondary" | "outline" | "default" | "destructive"> =
+  {
+    PENDING: "secondary",
+    QUEUED: "outline",
+    SENT: "default",
+    FAILED: "destructive",
+  };
 
 function RappelRow({
   label,
@@ -47,7 +48,9 @@ function RappelRow({
         {(statut === "QUEUED" || statut === "SENT") && campaignId ? (
           <p className="text-muted-foreground text-xs">Campagne Lemlist : {campaignId}</p>
         ) : null}
-        {statut === "FAILED" && erreur ? <p className="text-destructive text-xs">{erreur}</p> : null}
+        {statut === "FAILED" && erreur ? (
+          <p className="text-destructive text-xs">{erreur}</p>
+        ) : null}
       </div>
       <Badge variant={STATUT_VARIANTS[statut]}>{STATUT_LABELS[statut]}</Badge>
     </div>

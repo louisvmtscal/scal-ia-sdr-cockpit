@@ -37,8 +37,7 @@ function messageErreurFireflies(error: unknown): string {
 }
 
 export type RechercherReunionsResult =
-  | { success: true; meetings: FirefliesMeeting[] }
-  | { error: string };
+  { success: true; meetings: FirefliesMeeting[] } | { error: string };
 
 export async function rechercherReunionsFirefliesAction(
   query: string,
@@ -56,8 +55,7 @@ export async function rechercherReunionsFirefliesAction(
 }
 
 export type GetTranscriptionResult =
-  | { success: true; transcript: FirefliesFullTranscript }
-  | { error: string };
+  { success: true; transcript: FirefliesFullTranscript } | { error: string };
 
 export async function getTranscriptionFirefliesAction(
   meetingId: string,

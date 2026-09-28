@@ -128,7 +128,8 @@ export async function syncRendezVousFromSheet(): Promise<SyncSheetResult> {
     }
 
     const match = existing.find(
-      (e) => normalize(e.prenom) === normalize(row.prenom) && normalize(e.nom) === normalize(row.nom),
+      (e) =>
+        normalize(e.prenom) === normalize(row.prenom) && normalize(e.nom) === normalize(row.nom),
     );
 
     if (match) {

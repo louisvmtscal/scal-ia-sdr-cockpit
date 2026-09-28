@@ -65,7 +65,10 @@ export function getRendezVousEligibles(now: Date) {
  * Fonction pure (aucun accès I/O) — indépendante de la fréquence réelle
  * d'exécution du cron, idempotente via le statut PENDING.
  */
-export function estRappelDu(rendezVous: Pick<RendezVous, "dateRDV" | "smsJourJStatus">, now: Date): boolean {
+export function estRappelDu(
+  rendezVous: Pick<RendezVous, "dateRDV" | "smsJourJStatus">,
+  now: Date,
+): boolean {
   if (rendezVous.smsJourJStatus !== "PENDING") return false;
   if (jourParis(rendezVous.dateRDV) !== jourParis(now)) return false;
 

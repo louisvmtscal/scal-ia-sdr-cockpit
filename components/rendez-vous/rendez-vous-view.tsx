@@ -3,7 +3,10 @@
 import { useState } from "react";
 
 import { RendezVousKanban } from "@/components/rendez-vous/rendez-vous-kanban";
-import { RendezVousTable, type RendezVousAvecCommercial } from "@/components/rendez-vous/rendez-vous-table";
+import {
+  RendezVousTable,
+  type RendezVousAvecCommercial,
+} from "@/components/rendez-vous/rendez-vous-table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Role } from "@/lib/generated/prisma/enums";
 import type { TeamMember } from "@/lib/team";
@@ -27,7 +30,9 @@ export function RendezVousView({
         <TabsTrigger value="tableau">Tableau</TabsTrigger>
         <TabsTrigger value="kanban">Kanban</TabsTrigger>
       </TabsList>
-      <TabsContent value="tableau">
+      {/* keepMounted : les deux vues restent montées, on bascule juste leur visibilité —
+          évite le flash blanc du remount à chaque changement d'onglet. */}
+      <TabsContent value="tableau" keepMounted>
         <RendezVousTable
           data={data}
           teamMembers={teamMembers}
@@ -35,7 +40,7 @@ export function RendezVousView({
           isDev={isDev}
         />
       </TabsContent>
-      <TabsContent value="kanban">
+      <TabsContent value="kanban" keepMounted>
         <RendezVousKanban data={data} />
       </TabsContent>
     </Tabs>

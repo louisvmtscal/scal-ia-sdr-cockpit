@@ -18,10 +18,7 @@ export default async function RendezVousPage() {
   }
   const scope = { userId: session.user.id, role: session.user.role };
 
-  const [rendezVous, teamMembers] = await Promise.all([
-    listRendezVous(scope),
-    getTeamMembers(),
-  ]);
+  const [rendezVous, teamMembers] = await Promise.all([listRendezVous(scope), getTeamMembers()]);
 
   return (
     <div className="flex flex-col gap-4">

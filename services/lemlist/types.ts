@@ -29,8 +29,7 @@ export type SendWhatsappInput = {
 };
 
 export type SendWhatsappResult =
-  | { success: true; externalId: string }
-  | { success: false; error: string };
+  { success: true; externalId: string } | { success: false; error: string };
 
 export type SendSmsInput = {
   contactId?: string;
@@ -39,5 +38,4 @@ export type SendSmsInput = {
 };
 
 export type SendSmsResult =
-  | { success: true; externalId: string }
-  | { success: false; error: string };
+  { success: true; externalId: string } | { success: false; error: string };

@@ -26,8 +26,8 @@ export default async function ParametresPage() {
       <div>
         <h1 className="text-lg font-semibold">Paramètres</h1>
         <p className="text-muted-foreground text-sm">
-          Vue Admin : accès à tous les rendez-vous de l&apos;équipe et aux Automatisations. Vue SDR :
-          uniquement ses propres rendez-vous.
+          Vue Admin : accès à tous les rendez-vous de l&apos;équipe et aux Automatisations. Vue SDR
+          : uniquement ses propres rendez-vous.
         </p>
       </div>
 

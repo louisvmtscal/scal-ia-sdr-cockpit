@@ -170,6 +170,10 @@ model RendezVous {
 
   whatsappLastError String?
 
+  // --- Rappel email veille (17h Europe/Paris) au commercial concerné, résumé des RDV du lendemain ---
+  rappelVeilleEnvoye   Boolean   @default(false)
+  rappelVeilleEnvoyeAt DateTime?
+
   firefliesMeetingId    String?   @unique
   firefliesMeetingTitle String?
   firefliesMeetingDate  DateTime?

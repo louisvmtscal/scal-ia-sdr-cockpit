@@ -10,10 +10,8 @@ import {
   updateHonoreAction,
   updateOrigineAction,
 } from "@/actions/rendez-vous";
-import { EmailJ25Dialog } from "@/components/rendez-vous/email-j25-dialog";
-import { FirefliesDialog } from "@/components/rendez-vous/fireflies-dialog";
 import { ModifierRendezVousDialog } from "@/components/rendez-vous/modifier-rendez-vous-dialog";
-import { PreparationDialog } from "@/components/rendez-vous/preparation-dialog";
+import { RendezVousDetailSheet } from "@/components/rendez-vous/rendez-vous-detail-sheet";
 import { SupprimerRendezVousButton } from "@/components/rendez-vous/supprimer-rendez-vous-button";
 import { Input } from "@/components/ui/input";
 import {
@@ -123,19 +121,12 @@ export function RendezVousTable({
 }) {
   const [optimisticData, setOptimisticData] = useOptimistic(
     data,
-    (
-      state,
-      update:
-        | { type: "patch"; id: string; patch: Partial<RendezVousAvecCommercial> }
-        | { type: "remove"; id: string },
-    ) => {
-      if (update.type === "remove") {
-        return state.filter((row) => row.id !== update.id);
-      }
+    (state, update: { type: "patch"; id: string; patch: Partial<RendezVousAvecCommercial> }) => {
       return state.map((row) => (row.id === update.id ? { ...row, ...update.patch } : row));
     },
   );
   const [, startTransition] = useTransition();
+  const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
 
   const [search, setSearch] = useState("");
   const [filterCommercial, setFilterCommercial] = useState<string>("TOUS");
@@ -157,6 +148,7 @@ export function RendezVousTable({
     const term = search.trim().toLowerCase();
 
     const filtered = optimisticData.filter((row) => {
+      if (pendingDeleteIds.has(row.id)) return false;
       if (filterCommercial !== "TOUS" && row.commercialId !== filterCommercial) return false;
       if (filterOrigine !== "TOUTES" && row.origine !== filterOrigine) return false;
       if (filterHonore !== "TOUS" && row.honore !== filterHonore) return false;
@@ -186,7 +178,16 @@ export function RendezVousTable({
     });
 
     return sorted;
-  }, [optimisticData, search, filterCommercial, filterOrigine, filterHonore, sortKey, sortDir]);
+  }, [
+    optimisticData,
+    pendingDeleteIds,
+    search,
+    filterCommercial,
+    filterOrigine,
+    filterHonore,
+    sortKey,
+    sortDir,
+  ]);
 
   function handleUpdateHonore(row: RendezVousAvecCommercial, honore: HonoreStatus) {
     startTransition(async () => {
@@ -209,13 +210,44 @@ export function RendezVousTable({
     });
   }
 
-  async function handleDelete(row: RendezVousAvecCommercial) {
-    setOptimisticData({ type: "remove", id: row.id });
-    try {
-      await deleteRendezVousAction(row.id);
-    } catch {
-      toast.error("La suppression a échoué.");
-    }
+  /**
+   * Suppression différée : la ligne disparaît tout de suite (filtrée via
+   * pendingDeleteIds), mais l'action serveur n'est déclenchée qu'après le
+   * délai du toast — "Annuler" pendant ce délai n'a donc rien à défaire côté
+   * base de données, juste à réafficher la ligne.
+   */
+  function handleDelete(row: RendezVousAvecCommercial) {
+    setPendingDeleteIds((prev) => new Set(prev).add(row.id));
+
+    const timeoutId = setTimeout(() => {
+      startTransition(async () => {
+        try {
+          await deleteRendezVousAction(row.id);
+        } catch {
+          toast.error("La suppression a échoué.");
+          setPendingDeleteIds((prev) => {
+            const next = new Set(prev);
+            next.delete(row.id);
+            return next;
+          });
+        }
+      });
+    }, 5000);
+
+    toast(`Rendez-vous supprimé — ${row.prenom} ${row.nom}`, {
+      duration: 5000,
+      action: {
+        label: "Annuler",
+        onClick: () => {
+          clearTimeout(timeoutId);
+          setPendingDeleteIds((prev) => {
+            const next = new Set(prev);
+            next.delete(row.id);
+            return next;
+          });
+        },
+      },
+    });
   }
 
   return (
@@ -230,7 +262,10 @@ export function RendezVousTable({
             className="pl-8"
           />
         </div>
-        <Select value={filterCommercial} onValueChange={(value) => setFilterCommercial(value ?? "TOUS")}>
+        <Select
+          value={filterCommercial}
+          onValueChange={(value) => setFilterCommercial(value ?? "TOUS")}
+        >
           <SelectTrigger className="w-40">
             <SelectValue>
               {(value: string) =>
@@ -335,7 +370,9 @@ export function RendezVousTable({
                       onValueChange={(value) => handleUpdateOrigine(row, value as Origine)}
                     >
                       <SelectTrigger className="w-32">
-                        <SelectValue>{(value: string) => ORIGINE_LABELS[value as Origine]}</SelectValue>
+                        <SelectValue>
+                          {(value: string) => ORIGINE_LABELS[value as Origine]}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="INBOUND">Inbound</SelectItem>
@@ -367,7 +404,9 @@ export function RendezVousTable({
                       onValueChange={(value) => handleUpdateHonore(row, value as HonoreStatus)}
                     >
                       <SelectTrigger className="w-36">
-                        <SelectValue>{(value: string) => HONORE_LABELS[value as HonoreStatus]}</SelectValue>
+                        <SelectValue>
+                          {(value: string) => HONORE_LABELS[value as HonoreStatus]}
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="EN_ATTENTE">En attente</SelectItem>
@@ -384,10 +423,17 @@ export function RendezVousTable({
                     />
                   </TableCell>
                   <TableCell className="flex items-center justify-end gap-1">
-                    <EmailJ25Dialog
+                    <RendezVousDetailSheet
                       rendezVousId={row.id}
                       label={`${row.prenom} ${row.nom}`}
+                      societe={row.societe}
                       dateRDV={row.dateRDV}
+                      preparation={row.preparation}
+                      firefliesMeetingId={row.firefliesMeetingId}
+                      firefliesMeetingTitle={row.firefliesMeetingTitle}
+                      firefliesMeetingDate={row.firefliesMeetingDate}
+                      firefliesMeetingUrl={row.firefliesMeetingUrl}
+                      compteRendu={row.compteRendu}
                       emailJ25={row.emailJ25}
                       telephone={row.telephone}
                       whatsappJ1Status={row.whatsappJ1Status}
@@ -402,31 +448,12 @@ export function RendezVousTable({
                       smsLastError={row.smsLastError}
                       isDev={isDev}
                     />
-                    <PreparationDialog
-                      rendezVousId={row.id}
-                      label={`${row.prenom} ${row.nom}`}
-                      preparation={row.preparation}
-                    />
-                    <FirefliesDialog
-                      rendezVousId={row.id}
-                      label={`${row.prenom} ${row.nom}`}
-                      societe={row.societe}
-                      dateRDV={row.dateRDV}
-                      firefliesMeetingId={row.firefliesMeetingId}
-                      firefliesMeetingTitle={row.firefliesMeetingTitle}
-                      firefliesMeetingDate={row.firefliesMeetingDate}
-                      firefliesMeetingUrl={row.firefliesMeetingUrl}
-                      compteRendu={row.compteRendu}
-                    />
                     <ModifierRendezVousDialog
                       rendezVous={row}
                       teamMembers={teamMembers}
                       currentUser={currentUser}
                     />
-                    <SupprimerRendezVousButton
-                      label={`${row.prenom} ${row.nom}`}
-                      onConfirm={() => handleDelete(row)}
-                    />
+                    <SupprimerRendezVousButton onDelete={() => handleDelete(row)} />
                   </TableCell>
                 </TableRow>
               ))

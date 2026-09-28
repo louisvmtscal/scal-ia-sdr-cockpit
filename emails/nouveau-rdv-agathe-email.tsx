@@ -15,7 +15,9 @@ export function NouveauRdvAgatheEmail({
       <Preview>
         Nouveau rendez-vous : {nom} {prenom} ({societe})
       </Preview>
-      <Body style={{ backgroundColor: "#f4f4f5", fontFamily: "Arial, sans-serif", padding: "24px 0" }}>
+      <Body
+        style={{ backgroundColor: "#f4f4f5", fontFamily: "Arial, sans-serif", padding: "24px 0" }}
+      >
         <Container
           style={{
             backgroundColor: "#ffffff",

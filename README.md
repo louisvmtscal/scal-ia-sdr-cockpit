@@ -29,14 +29,14 @@ Copier `.env.example` vers `.env` et renseigner les variables (voir ci-dessous).
 
 ## Variables d'environnement
 
-| Variable | Description |
-|---|---|
-| `DATABASE_URL` / `DIRECT_URL` | Connexion PostgreSQL |
-| `AUTH_SECRET` / `AUTH_URL` | Auth.js |
-| `ANTHROPIC_API_KEY` | Génération des comptes rendus et fiches de préparation |
-| `RESEND_API_KEY` / `MAIL_FROM` | Envoi des emails |
-| `FIREFLIES_API_KEY` / `FIREFLIES_WEBHOOK_SECRET` | Récupération automatique des transcriptions |
-| `CRON_SECRET` | Sécurise le cron quotidien (fiche de préparation) |
+| Variable                                         | Description                                            |
+| ------------------------------------------------ | ------------------------------------------------------ |
+| `DATABASE_URL` / `DIRECT_URL`                    | Connexion PostgreSQL                                   |
+| `AUTH_SECRET` / `AUTH_URL`                       | Auth.js                                                |
+| `ANTHROPIC_API_KEY`                              | Génération des comptes rendus et fiches de préparation |
+| `RESEND_API_KEY` / `MAIL_FROM`                   | Envoi des emails                                       |
+| `FIREFLIES_API_KEY` / `FIREFLIES_WEBHOOK_SECRET` | Récupération automatique des transcriptions            |
+| `CRON_SECRET`                                    | Sécurise le cron quotidien (fiche de préparation)      |
 
 ## Déploiement
 

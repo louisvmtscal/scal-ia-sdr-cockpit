@@ -15,7 +15,8 @@ export async function genererCompteRenduAction(
 ): Promise<GenererCompteRenduResult> {
   if (!texteSource.trim()) {
     return {
-      error: "Impossible de générer le compte rendu. Vérifie que la transcription Fireflies est disponible.",
+      error:
+        "Impossible de générer le compte rendu. Vérifie que la transcription Fireflies est disponible.",
     };
   }
 

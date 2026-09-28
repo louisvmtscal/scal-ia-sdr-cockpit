@@ -23,7 +23,11 @@ import { formatRelativeDate } from "@/utils/format";
 
 import type { RendezVousAvecCommercial } from "./rendez-vous-table";
 
-const LOST_COLUMN = { id: "LOST" as const, label: "Lost", toneClass: "border-t-muted-foreground/40" };
+const LOST_COLUMN = {
+  id: "LOST" as const,
+  label: "Lost",
+  toneClass: "border-t-muted-foreground/40",
+};
 
 function RendezVousCard({
   row,
@@ -132,10 +136,7 @@ function sortByDateAsc(rows: RendezVousAvecCommercial[]) {
 export function RendezVousKanban({ data }: { data: RendezVousAvecCommercial[] }) {
   const [optimisticData, setOptimisticData] = useOptimistic(
     data,
-    (
-      state,
-      patch: { id: string; columnId: KanbanColumnId } | { id: string; restore: true },
-    ) => {
+    (state, patch: { id: string; columnId: KanbanColumnId } | { id: string; restore: true }) => {
       if ("restore" in patch) {
         return state.map((row) => (row.id === patch.id ? { ...row, lost: false } : row));
       }

@@ -6,13 +6,7 @@ import type { HonoreStatus } from "@/lib/generated/prisma/enums";
  * (préservés tels quels pour pouvoir récupérer la carte plus tard).
  */
 export type KanbanColumnId =
-  | "EN_ATTENTE"
-  | "A_REPLACER"
-  | "HONORE"
-  | "QUALIFIE"
-  | "R2"
-  | "DEAL_CLOTURE"
-  | "LOST";
+  "EN_ATTENTE" | "A_REPLACER" | "HONORE" | "QUALIFIE" | "R2" | "DEAL_CLOTURE" | "LOST";
 
 export type PipelineFields = {
   honore: HonoreStatus;

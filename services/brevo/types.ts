@@ -3,7 +3,8 @@ export type SendSmsInput = {
   message: string;
 };
 
-export type SendSmsResult = { success: true; messageId: string } | { success: false; error: string };
+export type SendSmsResult =
+  { success: true; messageId: string } | { success: false; error: string };
 
 /** Forme (partielle) de la réponse de POST /transactionalSMS/sms chez Brevo. */
 export type BrevoSmsResponse = {
