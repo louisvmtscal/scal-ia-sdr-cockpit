@@ -2,6 +2,7 @@ import "server-only";
 
 import { prisma } from "@/lib/prisma";
 import type { HonoreStatus, Origine } from "@/lib/generated/prisma/enums";
+import { sendNouveauRdvAgatheEmail } from "@/services/mail";
 
 type SheetRow = {
   prenom: string;
@@ -88,7 +89,9 @@ export type SyncSheetResult = {
  * correctif uniquement (création + mise à jour honore/qualifie/origine/date).
  * Les nouvelles lignes sont créées avec Louis comme commercial par défaut (le
  * sheet n'a pas de colonne Commercial — 100% des RDV existants étaient déjà
- * Louis au moment où cette sync a été introduite).
+ * Louis au moment où cette sync a été introduite). Chaque nouvelle ligne
+ * déclenche une notification à Agathe pour retrait des listes de
+ * prospection — jamais sur une simple mise à jour d'un RDV existant.
  */
 export async function syncRendezVousFromSheet(): Promise<SyncSheetResult> {
   const csvUrl = process.env.RDV_SHEET_CSV_URL;
@@ -165,6 +168,14 @@ export async function syncRendezVousFromSheet(): Promise<SyncSheetResult> {
         },
       });
       crees++;
+
+      await sendNouveauRdvAgatheEmail({
+        nom: row.nom,
+        prenom: row.prenom,
+        societe: row.societe,
+      }).catch((error) => {
+        console.error("Erreur notification Agathe (nouveau RDV) :", error);
+      });
     }
   }
 

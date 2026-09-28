@@ -1,7 +1,8 @@
 import { CompteRenduEmail } from "@/emails/compte-rendu-email";
 import { EmailJ25NotificationEmail } from "@/emails/email-j25-notification-email";
+import { NouveauRdvAgatheEmail } from "@/emails/nouveau-rdv-agathe-email";
 import { PreparationEmail } from "@/emails/preparation-email";
-import { MAIL_FROM, MAIL_TO_CEO, MAIL_TO_LOUIS, resend } from "@/integrations/resend";
+import { MAIL_FROM, MAIL_TO_AGATHE, MAIL_TO_CEO, MAIL_TO_LOUIS, resend } from "@/integrations/resend";
 import type { RendezVous } from "@/lib/generated/prisma/client";
 import type { CompteRendu } from "@/lib/validations/compte-rendu";
 import type { EmailJ25 } from "@/lib/validations/email-j25";
@@ -85,6 +86,27 @@ export async function sendEmailJ25NotificationEmail(rendezVous: RendezVous, emai
         dateRDV={formatDate(rendezVous.dateRDV)}
         contenu={emailJ25.contenu}
       />
+    ),
+  });
+}
+
+/**
+ * Notifie Agathe d'un nouveau RDV créé via la sync Google Sheet, pour
+ * qu'elle le retire des listes de prospection. Jamais pour les RDV créés
+ * manuellement dans le Cockpit — uniquement ceux importés du Sheet.
+ */
+export async function sendNouveauRdvAgatheEmail(rendezVous: { nom: string; prenom: string; societe: string }) {
+  if (!process.env.RESEND_API_KEY) {
+    console.warn("RESEND_API_KEY manquante : notification Agathe non envoyée.");
+    return;
+  }
+
+  await resend.emails.send({
+    from: MAIL_FROM,
+    to: MAIL_TO_AGATHE,
+    subject: `Nouveau rendez-vous : ${rendezVous.nom} ${rendezVous.prenom} (${rendezVous.societe})`,
+    react: (
+      <NouveauRdvAgatheEmail nom={rendezVous.nom} prenom={rendezVous.prenom} societe={rendezVous.societe} />
     ),
   });
 }

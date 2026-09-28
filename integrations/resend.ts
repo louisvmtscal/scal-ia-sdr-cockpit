@@ -10,3 +10,5 @@ export const MAIL_FROM = process.env.MAIL_FROM ?? "Scal-IA Cockpit <cockpit@scal
 export const MAIL_TO_CEO = "chloe@scal-ia.fr";
 /** Notifications internes (ex. brouillons Email J-25) : toujours Louis, jamais le prospect. */
 export const MAIL_TO_LOUIS = "louis@scal-ia.fr";
+/** Notifie Agathe des nouveaux RDV créés via la sync Google Sheet, pour retrait des listes de prospection. */
+export const MAIL_TO_AGATHE = "agathe@scal-ia.fr";
