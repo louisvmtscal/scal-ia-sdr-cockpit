@@ -18,7 +18,10 @@ function sommePrimes(rendezVous: Array<{ origine: Origine }>) {
 export async function listRendezVous(scope: Scope) {
   return prisma.rendezVous.findMany({
     where: scopeWhere(scope),
-    include: { commercial: true },
+    include: {
+      commercial: true,
+      notesInternes: { include: { author: true }, orderBy: { createdAt: "asc" } },
+    },
     orderBy: { dateRDV: "desc" },
   });
 }

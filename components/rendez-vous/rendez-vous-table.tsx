@@ -36,8 +36,17 @@ import type { HonoreStatus, Origine, Role } from "@/lib/generated/prisma/enums";
 import type { TeamMember } from "@/lib/team";
 import { formatDateTime } from "@/utils/format";
 
+export type NoteInterne = {
+  id: string;
+  contenu: string;
+  createdAt: Date;
+  authorId: string;
+  author: { name: string | null; email: string };
+};
+
 export type RendezVousAvecCommercial = RendezVous & {
   commercial: { id: string; name: string | null; email: string };
+  notesInternes: NoteInterne[];
 };
 
 type SortKey = "dateRDV" | "societe";
@@ -447,6 +456,8 @@ export function RendezVousTable({
                       smsJourJSentAt={row.smsJourJSentAt}
                       smsLastError={row.smsLastError}
                       isDev={isDev}
+                      notes={row.notesInternes}
+                      currentUser={currentUser}
                     />
                     <ModifierRendezVousDialog
                       rendezVous={row}

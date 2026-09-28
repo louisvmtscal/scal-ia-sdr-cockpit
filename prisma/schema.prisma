@@ -32,6 +32,7 @@ model User {
   accounts   Account[]
   sessions   Session[]
   rendezVous RendezVous[]
+  notes      RendezVousNote[]
 
   @@map("users")
 }
@@ -179,12 +180,32 @@ model RendezVous {
   firefliesMeetingDate  DateTime?
   firefliesMeetingUrl   String?
 
+  notesInternes RendezVousNote[]
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([dateRDV])
   @@index([commercialId])
   @@map("rendez_vous")
+}
+
+/** Thread de coordination interne par RDV (Louis <-> Chloé) — jamais visible du prospect. */
+model RendezVousNote {
+  id String @id @default(cuid())
+
+  rendezVousId String
+  rendezVous   RendezVous @relation(fields: [rendezVousId], references: [id], onDelete: Cascade)
+
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  contenu String @db.Text
+
+  createdAt DateTime @default(now())
+
+  @@index([rendezVousId])
+  @@map("rendez_vous_notes")
 }
 
 // Contenus éditables sans toucher au code : messages d'automatisation et

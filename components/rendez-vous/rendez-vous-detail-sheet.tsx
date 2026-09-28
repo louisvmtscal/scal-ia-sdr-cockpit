@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarClockIcon, MailIcon, SearchIcon } from "lucide-react";
+import { CalendarClockIcon, MailIcon, MessageSquareIcon, SearchIcon } from "lucide-react";
 
 import {
   Accordion,
@@ -11,11 +11,13 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import type { SmsStatus, WhatsappStatus } from "@/lib/generated/prisma/enums";
+import type { Role, SmsStatus, WhatsappStatus } from "@/lib/generated/prisma/enums";
 
 import { EmailJ25Section } from "./email-j25-section";
 import { FirefliesSection } from "./fireflies-section";
+import { NotesInternesSection } from "./notes-internes-section";
 import { PreparationSection } from "./preparation-section";
+import type { NoteInterne } from "./rendez-vous-table";
 
 /**
  * Panneau détail unifié d'un RDV : préparation, Fireflies + compte rendu, et
@@ -46,6 +48,8 @@ export function RendezVousDetailSheet({
   smsJourJSentAt,
   smsLastError,
   isDev,
+  notes,
+  currentUser,
 }: {
   rendezVousId: string;
   label: string;
@@ -70,6 +74,8 @@ export function RendezVousDetailSheet({
   smsJourJSentAt: Date | null;
   smsLastError: string | null;
   isDev: boolean;
+  notes: NoteInterne[];
+  currentUser: { id: string; role: Role };
 }) {
   return (
     <Sheet>
@@ -86,7 +92,22 @@ export function RendezVousDetailSheet({
           <SheetTitle>{label}</SheetTitle>
         </SheetHeader>
 
-        <Accordion defaultValue={["preparation"]} className="px-4 pb-4">
+        <Accordion defaultValue={["notes"]} className="px-4 pb-4">
+          <AccordionItem value="notes">
+            <AccordionHeader>
+              <AccordionTrigger>
+                <MessageSquareIcon className="size-4" />
+                Notes internes
+                {notes.length > 0 ? (
+                  <span className="text-muted-foreground ml-1 text-xs">({notes.length})</span>
+                ) : null}
+              </AccordionTrigger>
+            </AccordionHeader>
+            <AccordionPanel>
+              <NotesInternesSection rendezVousId={rendezVousId} notes={notes} currentUser={currentUser} />
+            </AccordionPanel>
+          </AccordionItem>
+
           <AccordionItem value="preparation">
             <AccordionHeader>
               <AccordionTrigger>
