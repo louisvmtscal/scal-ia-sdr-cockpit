@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import { RendezVousView } from "@/components/rendez-vous/rendez-vous-view";
+import { SyncSheetButton } from "@/components/rendez-vous/sync-sheet-button";
 import { auth } from "@/lib/auth";
 import { getTeamMembers } from "@/lib/team";
 import { listRendezVous } from "@/services/rendez-vous";
@@ -24,9 +25,12 @@ export default async function RendezVousPage() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div>
-        <h1 className="text-lg font-semibold">Suivi des rendez-vous</h1>
-        <p className="text-muted-foreground text-sm">{rendezVous.length} rendez-vous au total</p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-lg font-semibold">Suivi des rendez-vous</h1>
+          <p className="text-muted-foreground text-sm">{rendezVous.length} rendez-vous au total</p>
+        </div>
+        {scope.role !== "SDR" ? <SyncSheetButton /> : null}
       </div>
       <RendezVousView
         data={rendezVous}
