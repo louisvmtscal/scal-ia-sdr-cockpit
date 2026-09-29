@@ -44,7 +44,6 @@ export async function getDashboardStats(scope: Scope) {
     ceMois,
     ceMoisEcoule,
     honores,
-    nonHonores,
     qualifiesEtHonores,
     total,
     rdvPrimablesMois,
@@ -56,7 +55,6 @@ export async function getDashboardStats(scope: Scope) {
     }),
     prisma.rendezVous.count({ where: { ...where, dateRDV: moisEcoule } }),
     prisma.rendezVous.count({ where: { ...where, honore: "OUI", dateRDV: moisEcoule } }),
-    prisma.rendezVous.count({ where: { ...where, honore: "NON", dateRDV: moisEcoule } }),
     prisma.rendezVous.count({
       where: { ...where, qualifie: true, honore: "OUI", dateRDV: moisEcoule },
     }),
@@ -80,10 +78,12 @@ export async function getDashboardStats(scope: Scope) {
     }),
   ]);
 
-  const rdvPasses = honores + nonHonores;
-  const tauxPresence = rdvPasses > 0 ? (honores / rdvPasses) * 100 : 0;
-  // Taux de qualification = RDV honorés ET qualifiés / RDV honorés.
-  const tauxQualification = honores > 0 ? (qualifiesEtHonores / honores) * 100 : 0;
+  // Les deux taux sont calculés sur le même dénominateur que le "16/25" affiché
+  // (tous les RDV du mois déjà passés à date), pour que les chiffres du dashboard
+  // se recoupent : un RDV encore EN_ATTENTE ou A_REPLACER compte comme "non honoré"
+  // / "non qualifié" tant qu'il n'a pas été traité, au lieu d'être silencieusement exclu.
+  const tauxPresence = ceMoisEcoule > 0 ? (honores / ceMoisEcoule) * 100 : 0;
+  const tauxQualification = ceMoisEcoule > 0 ? (qualifiesEtHonores / ceMoisEcoule) * 100 : 0;
   // "Mes primes" = mois en cours uniquement. "Mes primes totales" = historique complet, sans limite de temps.
   const mesPrimes = sommePrimes(rdvPrimablesMois);
   const mesPrimesTotal = sommePrimes(rdvPrimablesTotal);
@@ -134,23 +134,4 @@ export async function getWeeklySeries(scope: Scope, weeksCount = 8) {
     semaine: `${weekStart.toLocaleDateString("fr-FR", { day: "2-digit", month: "short" })}`,
     rendezVous: count,
   }));
-}
-
-export async function getUpcomingRendezVous(scope: Scope, limit = 5) {
-  return prisma.rendezVous.findMany({
-    where: { ...scopeWhere(scope), dateRDV: { gte: new Date() } },
-    include: { commercial: true },
-    orderBy: { dateRDV: "asc" },
-    take: limit,
-  });
-}
-
-export async function getRelancesNecessaires(scope: Scope) {
-  const now = new Date();
-  return prisma.rendezVous.findMany({
-    where: { ...scopeWhere(scope), dateRDV: { lt: now }, honore: "NON" },
-    include: { commercial: true },
-    orderBy: { dateRDV: "desc" },
-    take: 5,
-  });
 }
