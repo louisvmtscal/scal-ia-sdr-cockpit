@@ -78,12 +78,12 @@ export async function getDashboardStats(scope: Scope) {
     }),
   ]);
 
-  // Les deux taux sont calculés sur le même dénominateur que le "16/25" affiché
-  // (tous les RDV du mois déjà passés à date), pour que les chiffres du dashboard
-  // se recoupent : un RDV encore EN_ATTENTE ou A_REPLACER compte comme "non honoré"
-  // / "non qualifié" tant qu'il n'a pas été traité, au lieu d'être silencieusement exclu.
+  // Taux de présence : sur tous les RDV du mois déjà passés à date (un RDV encore
+  // EN_ATTENTE ou A_REPLACER compte comme "non honoré" tant qu'il n'a pas été traité).
   const tauxPresence = ceMoisEcoule > 0 ? (honores / ceMoisEcoule) * 100 : 0;
-  const tauxQualification = ceMoisEcoule > 0 ? (qualifiesEtHonores / ceMoisEcoule) * 100 : 0;
+  // Taux de qualification : uniquement sur les RDV honorés "OUI" (impossible de
+  // qualifier un prospect qui ne s'est pas présenté).
+  const tauxQualification = honores > 0 ? (qualifiesEtHonores / honores) * 100 : 0;
   // "Mes primes" = mois en cours uniquement. "Mes primes totales" = historique complet, sans limite de temps.
   const mesPrimes = sommePrimes(rdvPrimablesMois);
   const mesPrimesTotal = sommePrimes(rdvPrimablesTotal);
