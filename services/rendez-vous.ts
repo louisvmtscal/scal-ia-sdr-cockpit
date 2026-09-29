@@ -41,6 +41,7 @@ export async function getDashboardStats(scope: Scope, periode: { start: Date; en
 
   const [
     totalPeriode,
+    bookesPeriode,
     ecoule,
     honores,
     qualifiesEtHonores,
@@ -49,6 +50,9 @@ export async function getDashboardStats(scope: Scope, periode: { start: Date; en
     rdvPotentiels,
   ] = await Promise.all([
     prisma.rendezVous.count({ where: { ...where, dateRDV: dansLaPeriode } }),
+    // Booké = créé (uploadé/synchronisé) dans la période, peu importe la date du meeting
+    // (ex: un cold call qui décroche un RDV ce mois-ci pour le mois prochain).
+    prisma.rendezVous.count({ where: { ...where, createdAt: dansLaPeriode } }),
     prisma.rendezVous.count({ where: { ...where, dateRDV: periodeEcoulee } }),
     prisma.rendezVous.count({ where: { ...where, honore: "OUI", dateRDV: periodeEcoulee } }),
     prisma.rendezVous.count({
@@ -82,6 +86,7 @@ export async function getDashboardStats(scope: Scope, periode: { start: Date; en
 
   return {
     totalPeriode,
+    bookesPeriode,
     periodeEcoulee: ecoule,
     honoreEtQualifie: qualifiesEtHonores,
     tauxPresence,

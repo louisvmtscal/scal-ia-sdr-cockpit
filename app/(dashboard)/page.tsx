@@ -1,4 +1,12 @@
-import { CalendarIcon, CheckCircle2Icon, CoinsIcon, GaugeIcon, PiggyBankIcon, TargetIcon } from "lucide-react";
+import {
+  CalendarIcon,
+  CheckCircle2Icon,
+  CoinsIcon,
+  GaugeIcon,
+  PhoneOutgoingIcon,
+  PiggyBankIcon,
+  TargetIcon,
+} from "lucide-react";
 
 import { redirect } from "next/navigation";
 
@@ -33,7 +41,18 @@ export default async function DashboardPage({
   const periodeCourt = PERIOD_SHORT_LABELS[periode.key];
 
   const statCards = [
-    { label: `RDV ${periodeCourt}`, value: String(stats.totalPeriode), icon: CalendarIcon },
+    {
+      label: `RDV ${periodeCourt}`,
+      value: String(stats.totalPeriode),
+      icon: CalendarIcon,
+      hint: "Meeting prévu dans la période, quelle que soit sa date de booking",
+    },
+    {
+      label: `RDV bookés ${periodeCourt}`,
+      value: String(stats.bookesPeriode),
+      icon: PhoneOutgoingIcon,
+      hint: "Décroché dans la période, quelle que soit la date du meeting",
+    },
     {
       label: "RDV honoré et qualifié",
       value: `${stats.honoreEtQualifie} / ${stats.periodeEcoulee}`,
