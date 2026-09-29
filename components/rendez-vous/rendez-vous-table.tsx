@@ -34,6 +34,7 @@ import { HONORE_LABELS, ORIGINE_LABELS } from "@/lib/constants/rendez-vous";
 import type { RendezVous } from "@/lib/generated/prisma/client";
 import type { HonoreStatus, Origine, Role } from "@/lib/generated/prisma/enums";
 import type { TeamMember } from "@/lib/team";
+import { cn } from "@/lib/utils";
 import { formatDateTime } from "@/utils/format";
 
 export type NoteInterne = {
@@ -136,6 +137,19 @@ export function RendezVousTable({
   );
   const [, startTransition] = useTransition();
   const [pendingDeleteIds, setPendingDeleteIds] = useState<Set<string>>(new Set());
+  const [flashIds, setFlashIds] = useState<Set<string>>(new Set());
+
+  /** Anneau bref sur la ligne dont le statut vient de changer, pour attirer l'œil sur le résultat. */
+  function flashRow(id: string) {
+    setFlashIds((prev) => new Set(prev).add(id));
+    setTimeout(() => {
+      setFlashIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    }, 700);
+  }
 
   const [search, setSearch] = useState("");
   const [filterCommercial, setFilterCommercial] = useState<string>("TOUS");
@@ -201,6 +215,7 @@ export function RendezVousTable({
   function handleUpdateHonore(row: RendezVousAvecCommercial, honore: HonoreStatus) {
     startTransition(async () => {
       setOptimisticData({ type: "patch", id: row.id, patch: { honore } });
+      flashRow(row.id);
       await updateHonoreAction(row.id, honore);
     });
   }
@@ -215,6 +230,7 @@ export function RendezVousTable({
   function handleToggleQualifie(row: RendezVousAvecCommercial, qualifie: boolean) {
     startTransition(async () => {
       setOptimisticData({ type: "patch", id: row.id, patch: { qualifie } });
+      flashRow(row.id);
       await toggleQualifieAction(row.id, qualifie);
     });
   }
@@ -370,7 +386,14 @@ export function RendezVousTable({
               </TableRow>
             ) : (
               rows.map((row) => (
-                <TableRow key={row.id} className={rowToneClass(row)}>
+                <TableRow
+                  key={row.id}
+                  className={cn(
+                    rowToneClass(row),
+                    "transition-all duration-700",
+                    flashIds.has(row.id) && "ring-primary/60 ring-2 ring-inset",
+                  )}
+                >
                   <TableCell className="whitespace-nowrap">{formatDateTime(row.dateRDV)}</TableCell>
                   <TableCell>{row.commercial.name ?? row.commercial.email}</TableCell>
                   <TableCell>

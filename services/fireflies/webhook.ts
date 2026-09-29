@@ -66,7 +66,7 @@ async function trouverRendezVousCorrespondant(
  *
  * Ne génère JAMAIS de compte rendu automatiquement : la génération reste
  * strictement manuelle, à l'initiative de l'utilisateur, via le bouton
- * "✨ Générer le compte rendu" dans le dialogue Fireflies.
+ * "Générer le compte rendu" dans le dialogue Fireflies.
  */
 export async function traiterTranscriptionFireflies(meetingId: string) {
   const dejaTraite = await prisma.rendezVous.findUnique({

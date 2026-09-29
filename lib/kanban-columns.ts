@@ -56,7 +56,7 @@ export const KANBAN_COLUMNS: {
   },
   {
     id: "DEAL_CLOTURE",
-    label: "Deal closé 🏆",
+    label: "Deal closé",
     toneClass: "border-t-amber-400",
     fields: { honore: "OUI", qualifie: true, r2EnAttente: false, dealCloture: true },
   },

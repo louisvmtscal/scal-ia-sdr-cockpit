@@ -10,8 +10,8 @@ import {
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { Trash2Icon } from "lucide-react";
-import { useOptimistic, useTransition } from "react";
+import { Trash2Icon, TrophyIcon } from "lucide-react";
+import { useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { moveKanbanCardAction, restoreFromLostAction } from "@/actions/rendez-vous";
@@ -32,9 +32,11 @@ const LOST_COLUMN = {
 function RendezVousCard({
   row,
   onRestore,
+  justMoved,
 }: {
   row: RendezVousAvecCommercial;
   onRestore?: () => void;
+  justMoved?: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
     id: row.id,
@@ -51,9 +53,10 @@ function RendezVousCard({
           : undefined
       }
       className={cn(
-        "bg-card cursor-grab touch-none rounded-lg border p-3 shadow-xs active:cursor-grabbing",
+        "bg-card cursor-grab touch-none rounded-lg border p-3 shadow-xs transition-all duration-700 active:cursor-grabbing",
         isDragging && "opacity-50",
         row.lost && "opacity-70",
+        justMoved && "ring-primary/60 ring-2",
       )}
     >
       <div className="flex items-start justify-between gap-2">
@@ -92,19 +95,24 @@ function KanbanColumn({
   toneClass,
   rows,
   onRestore,
+  flashId,
 }: {
   id: KanbanColumnId;
   label: string;
   toneClass: string;
   rows: RendezVousAvecCommercial[];
   onRestore?: (id: string) => void;
+  flashId: string | null;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
   return (
     <div className="flex w-72 shrink-0 flex-col gap-2">
       <div className={cn("flex items-center justify-between border-t-2 px-1 pt-2", toneClass)}>
-        <h3 className="text-sm font-semibold">{label}</h3>
+        <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+          {id === "DEAL_CLOTURE" ? <TrophyIcon className="size-3.5 text-amber-500" /> : null}
+          {label}
+        </h3>
         <span className="text-muted-foreground text-xs">{rows.length}</span>
       </div>
       <div
@@ -119,6 +127,7 @@ function KanbanColumn({
             key={row.id}
             row={row}
             onRestore={onRestore ? () => onRestore(row.id) : undefined}
+            justMoved={row.id === flashId}
           />
         ))}
         {rows.length === 0 ? (
@@ -151,6 +160,7 @@ export function RendezVousKanban({ data }: { data: RendezVousAvecCommercial[] })
     },
   );
   const [, startTransition] = useTransition();
+  const [flashId, setFlashId] = useState<string | null>(null);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   function handleDragEnd(event: DragEndEvent) {
@@ -163,6 +173,8 @@ export function RendezVousKanban({ data }: { data: RendezVousAvecCommercial[] })
 
     startTransition(async () => {
       setOptimisticData({ id: row.id, columnId: targetColumnId });
+      setFlashId(row.id);
+      setTimeout(() => setFlashId(null), 700);
       try {
         await moveKanbanCardAction(row.id, targetColumnId);
       } catch {
@@ -192,6 +204,7 @@ export function RendezVousKanban({ data }: { data: RendezVousAvecCommercial[] })
             label={column.label}
             toneClass={column.toneClass}
             rows={sortByDateAsc(optimisticData.filter((row) => columnIdFor(row) === column.id))}
+            flashId={flashId}
           />
         ))}
         <KanbanColumn
@@ -200,6 +213,7 @@ export function RendezVousKanban({ data }: { data: RendezVousAvecCommercial[] })
           toneClass={LOST_COLUMN.toneClass}
           rows={sortByDateAsc(optimisticData.filter((row) => columnIdFor(row) === "LOST"))}
           onRestore={handleRestore}
+          flashId={flashId}
         />
       </div>
     </DndContext>

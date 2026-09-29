@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2Icon, SendIcon } from "lucide-react";
+import { BellRingIcon, Loader2Icon, SendIcon } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
@@ -52,7 +52,10 @@ export function RappelJourJSection({
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border p-4">
-      <p className="text-sm font-medium">📆 Rappel jour J (9h10)</p>
+      <p className="flex items-center gap-1.5 text-sm font-medium">
+        <BellRingIcon className="size-3.5" />
+        Rappel jour J (9h10)
+      </p>
 
       <div className="flex items-center justify-between gap-2 text-sm">
         <div>

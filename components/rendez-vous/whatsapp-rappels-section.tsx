@@ -1,6 +1,6 @@
 "use client";
 
-import { Loader2Icon, SendIcon } from "lucide-react";
+import { Loader2Icon, MessageCircleIcon, SendIcon } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
@@ -95,7 +95,10 @@ export function WhatsappRappelsSection({
 
   return (
     <div className="flex flex-col gap-3 rounded-lg border p-4">
-      <p className="text-sm font-medium">📱 Rappels WhatsApp</p>
+      <p className="flex items-center gap-1.5 text-sm font-medium">
+        <MessageCircleIcon className="size-3.5" />
+        Rappels WhatsApp
+      </p>
 
       <div className="flex flex-col gap-2">
         <RappelRow

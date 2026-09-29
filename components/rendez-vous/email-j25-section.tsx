@@ -1,10 +1,11 @@
 "use client";
 
-import { CopyIcon, Loader2Icon, PencilIcon, SparklesIcon } from "lucide-react";
+import { CopyIcon, Loader2Icon, MailIcon, PencilIcon, SparklesIcon } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { genererEmailJ25Action, modifierEmailJ25Action } from "@/actions/email-j25";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { SmsStatus, WhatsappStatus } from "@/lib/generated/prisma/enums";
@@ -104,10 +105,13 @@ export function EmailJ25Section({
 
       <div className="flex flex-col gap-3 rounded-lg border p-4">
         <div className="flex items-center justify-between">
-          <p className="text-sm font-medium">📧 Email J-25</p>
-          <p className="text-muted-foreground text-xs">
-            {emailJ25 ? "🟢 Généré" : "⚪ Non généré"}
+          <p className="flex items-center gap-1.5 text-sm font-medium">
+            <MailIcon className="size-3.5" />
+            Email J-25
           </p>
+          <Badge variant={emailJ25 ? "default" : "secondary"}>
+            {emailJ25 ? "Généré" : "Non généré"}
+          </Badge>
         </div>
         <p className="text-muted-foreground text-xs">
           Date prévue d&apos;envoi : {formatDate(dateEnvoi)}

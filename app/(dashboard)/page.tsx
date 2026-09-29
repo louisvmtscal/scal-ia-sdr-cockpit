@@ -114,14 +114,14 @@ export default async function DashboardPage() {
       hint: "Sur les RDV du mois déjà passés à date",
     },
     {
-      label: "💰 Mes primes",
+      label: "Mes primes",
       value: formatCurrency(stats.mesPrimes),
       icon: CoinsIcon,
       hint: `RDV honorés et qualifiés — ${moisEnCours}`,
       microHint: `Mes primes totales : ${formatCurrency(stats.mesPrimesTotal)}`,
     },
     {
-      label: "💰 Primes potentielles",
+      label: "Primes potentielles",
       value: formatCurrency(stats.primesPotentielles),
       icon: PiggyBankIcon,
       hint: "RDV en attente",

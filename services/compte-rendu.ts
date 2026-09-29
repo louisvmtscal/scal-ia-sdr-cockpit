@@ -10,7 +10,7 @@ import { getTemplateContent } from "@/services/templates";
  * Génère un compte rendu structuré à partir d'une transcription et l'enregistre
  * sur le rendez-vous. Aucun effet de bord : ni email, ni WhatsApp/SMS, ni
  * changement du statut Qualifié. Jamais déclenché automatiquement —
- * uniquement à l'initiative de l'utilisateur (bouton "✨ Générer le compte rendu").
+ * uniquement à l'initiative de l'utilisateur (bouton "Générer le compte rendu").
  */
 export async function genererEtEnregistrerCompteRendu(rendezVousId: string, texteSource: string) {
   const rendezVous = await prisma.rendezVous.findUniqueOrThrow({ where: { id: rendezVousId } });

@@ -122,7 +122,7 @@ function CompteRenduBlock({
       }
       onUpdate(result.compteRendu);
       setIsEditing(false);
-      toast.success("✅ Compte rendu enregistré");
+      toast.success("Compte rendu enregistré.");
     });
   }
 
@@ -147,14 +147,14 @@ function CompteRenduBlock({
       }
       onUpdate(result.compteRendu);
       setIsEditing(false);
-      toast.success("✅ Compte rendu enregistré");
+      toast.success("Compte rendu enregistré.");
     });
   }
 
   function handleCopyHubspot() {
     if (!compteRendu) return;
     navigator.clipboard.writeText(formatCompteRenduForClipboard(compteRendu, { societe, dateRDV }));
-    toast.success("✅ Compte rendu copié — prêt à être collé dans HubSpot");
+    toast.success("Compte rendu copié — prêt à être collé dans HubSpot.");
   }
 
   function setChamp<K extends keyof CompteRendu>(key: K, value: CompteRendu[K]) {
@@ -177,7 +177,7 @@ function CompteRenduBlock({
       {!compteRendu ? (
         <Button onClick={handleGenerer} disabled={isPending} size="sm" className="self-start">
           {isPending ? <Loader2Icon className="animate-spin" /> : <SparklesIcon />}
-          {isPending ? "Génération du compte rendu..." : "✨ Générer le compte rendu"}
+          {isPending ? "Génération du compte rendu..." : "Générer le compte rendu"}
         </Button>
       ) : isEditing && champs ? (
         <div className="flex flex-col gap-3">
@@ -246,7 +246,7 @@ function CompteRenduBlock({
           <div className="flex flex-wrap gap-2">
             <Button size="sm" variant="outline" onClick={handleCopyHubspot}>
               <ClipboardIcon />
-              📋 Copier dans HubSpot
+              Copier dans HubSpot
             </Button>
             <Button size="sm" variant="outline" onClick={handleStartEdit}>
               <PencilIcon />
@@ -256,7 +256,7 @@ function CompteRenduBlock({
               <AlertDialogTrigger
                 render={
                   <Button size="sm" variant="outline" disabled={isPending}>
-                    {isPending ? <Loader2Icon className="animate-spin" /> : <RefreshCwIcon />}↻
+                    {isPending ? <Loader2Icon className="animate-spin" /> : <RefreshCwIcon />}
                     Régénérer
                   </Button>
                 }
