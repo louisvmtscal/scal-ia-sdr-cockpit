@@ -30,42 +30,32 @@ export async function getRendezVousById(id: string) {
   return prisma.rendezVous.findUnique({ where: { id } });
 }
 
-export async function getDashboardStats(scope: Scope) {
+export async function getDashboardStats(scope: Scope, periode: { start: Date; end: Date }) {
   const where = scopeWhere(scope);
   const now = new Date();
-  const startMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-  const startNextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-  // "Passé" = ce mois-ci ET déjà arrivé à date — sert de dénominateur pour
-  // honoré+qualifié et les taux, pour ne jamais comparer à un total du mois
-  // qui inclut encore des RDV à venir.
-  const moisEcoule = { gte: startMonth, lte: now };
+  const dansLaPeriode = { gte: periode.start, lte: periode.end };
+  // "Écoulé" = la portion de la période déjà arrivée à date — sert de dénominateur
+  // pour honoré+qualifié et le taux de présence, pour ne jamais comparer à un total
+  // qui inclut encore des RDV à venir dans la période sélectionnée.
+  const periodeEcoulee = { gte: periode.start, lte: periode.end < now ? periode.end : now };
 
   const [
-    ceMois,
-    ceMoisEcoule,
+    totalPeriode,
+    ecoule,
     honores,
     qualifiesEtHonores,
-    total,
-    rdvPrimablesMois,
+    rdvPrimablesPeriode,
     rdvPrimablesTotal,
     rdvPotentiels,
   ] = await Promise.all([
+    prisma.rendezVous.count({ where: { ...where, dateRDV: dansLaPeriode } }),
+    prisma.rendezVous.count({ where: { ...where, dateRDV: periodeEcoulee } }),
+    prisma.rendezVous.count({ where: { ...where, honore: "OUI", dateRDV: periodeEcoulee } }),
     prisma.rendezVous.count({
-      where: { ...where, dateRDV: { gte: startMonth, lt: startNextMonth } },
+      where: { ...where, qualifie: true, honore: "OUI", dateRDV: periodeEcoulee },
     }),
-    prisma.rendezVous.count({ where: { ...where, dateRDV: moisEcoule } }),
-    prisma.rendezVous.count({ where: { ...where, honore: "OUI", dateRDV: moisEcoule } }),
-    prisma.rendezVous.count({
-      where: { ...where, qualifie: true, honore: "OUI", dateRDV: moisEcoule },
-    }),
-    prisma.rendezVous.count({ where }),
     prisma.rendezVous.findMany({
-      where: {
-        ...where,
-        honore: "OUI",
-        qualifie: true,
-        dateRDV: { gte: startMonth, lt: startNextMonth },
-      },
+      where: { ...where, honore: "OUI", qualifie: true, dateRDV: dansLaPeriode },
       select: { origine: true },
     }),
     prisma.rendezVous.findMany({
@@ -78,28 +68,27 @@ export async function getDashboardStats(scope: Scope) {
     }),
   ]);
 
-  // Taux de présence : sur tous les RDV du mois déjà passés à date (un RDV encore
+  // Taux de présence : sur tous les RDV de la période déjà passés à date (un RDV encore
   // EN_ATTENTE ou A_REPLACER compte comme "non honoré" tant qu'il n'a pas été traité).
-  const tauxPresence = ceMoisEcoule > 0 ? (honores / ceMoisEcoule) * 100 : 0;
+  const tauxPresence = ecoule > 0 ? (honores / ecoule) * 100 : 0;
   // Taux de qualification : uniquement sur les RDV honorés "OUI" (impossible de
   // qualifier un prospect qui ne s'est pas présenté).
   const tauxQualification = honores > 0 ? (qualifiesEtHonores / honores) * 100 : 0;
-  // "Mes primes" = mois en cours uniquement. "Mes primes totales" = historique complet, sans limite de temps.
-  const mesPrimes = sommePrimes(rdvPrimablesMois);
+  // "Mes primes" = sur la période sélectionnée. "Mes primes totales" = historique complet, sans limite de temps.
+  const mesPrimes = sommePrimes(rdvPrimablesPeriode);
   const mesPrimesTotal = sommePrimes(rdvPrimablesTotal);
   // Primes potentielles (RDV en attente) : jamais bornées dans le temps.
   const primesPotentielles = sommePrimes(rdvPotentiels);
 
   return {
-    ceMois,
-    ceMoisEcoule,
+    totalPeriode,
+    periodeEcoulee: ecoule,
     honoreEtQualifie: qualifiesEtHonores,
     tauxPresence,
     tauxQualification,
     mesPrimes,
     mesPrimesTotal,
     primesPotentielles,
-    total,
   };
 }
 
