@@ -1,12 +1,14 @@
-name: Rappels RDV (jour J + WhatsApp + veille)
+name: Rappels RDV (jour J + WhatsApp + veille + digest Agathe)
 
 # Declenche les routes cron qui ont besoin d'une frequence < 1x/jour
 # (impossible nativement sur le plan Vercel Hobby, voir vercel.json pour
 # les crons natifs quotidiens). GitHub Actions tourne gratuitement toutes
-# les 15 min tant que le repo reste actif.
+# les 15 min tant que le repo reste actif. Minutes decalees (7/22/37/52 au
+# lieu de */15 pile) pour eviter les pics de charge aux minutes rondes, ou
+# GitHub retarde ou saute le declenchement plus souvent.
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch: {}
 
 jobs:
@@ -22,3 +24,6 @@ jobs:
       - name: Rappel veille (17h) par email
         run: |
           curl -sf -o /dev/null -w "rappel-veille: HTTP %{http_code}\n" -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.CRON_BASE_URL }}/api/cron/rappel-veille"
+      - name: Digest Agathe (17h45) par email
+        run: |
+          curl -sf -o /dev/null -w "digest-agathe: HTTP %{http_code}\n" -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" "${{ secrets.CRON_BASE_URL }}/api/cron/digest-agathe"
