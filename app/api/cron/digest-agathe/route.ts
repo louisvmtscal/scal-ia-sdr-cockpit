@@ -5,8 +5,8 @@ import { envoyerDigestAgatheSiDu } from "@/services/digest-agathe";
 
 /**
  * Déclenché périodiquement (GitHub Actions, toutes les 15 min — voir
- * .github/workflows/cron-rappels.yml) pour envoyer, à partir de 17h45
- * Europe/Paris, un digest à Agathe des nouveaux RDV du jour (s'il y en a).
+ * .github/workflows/cron-rappels.yml) pour notifier Agathe des nouveaux RDV
+ * pas encore signalés (s'il y en a) — pas de créneau horaire fixe.
  * Protégé par CRON_SECRET, comme les autres routes cron.
  */
 export async function GET(request: NextRequest) {

@@ -1,8 +1,11 @@
+import { render } from "@react-email/render";
+
 import { CompteRenduEmail } from "@/emails/compte-rendu-email";
 import { DigestAgatheEmail } from "@/emails/digest-agathe-email";
 import { EmailJ25NotificationEmail } from "@/emails/email-j25-notification-email";
 import { PreparationEmail } from "@/emails/preparation-email";
 import { RappelVeilleEmail } from "@/emails/rappel-veille-email";
+import { GMAIL_SMTP_USER, gmailTransport } from "@/integrations/gmail-smtp";
 import {
   MAIL_FROM,
   MAIL_TO_AGATHE,
@@ -104,24 +107,28 @@ export async function sendEmailJ25NotificationEmail(rendezVous: RendezVous, emai
 }
 
 /**
- * Digest quotidien (17h45 Europe/Paris) à Agathe des nouveaux RDV du jour, pour
- * qu'elle les retire des listes de prospection. N'est appelé que s'il y a au
- * moins un RDV à signaler (voir services/digest-agathe.ts). Comme
- * sendRappelVeilleEmail, lève une erreur sur échec : l'appelant s'en sert
- * comme seul signal pour savoir si l'envoi a réussi et retenter plus tard.
+ * Notifie Agathe des nouveaux RDV pas encore signalés (voir
+ * services/digest-agathe.ts), dès le prochain passage du cron — pas de
+ * créneau horaire fixe. Envoyé via SMTP Gmail (mot de passe d'application) et
+ * non Resend : contourne la vérification de domaine d'expédition, bloquée
+ * tant que l'accès au DNS de scal-ia.fr n'est pas disponible. Lève une erreur
+ * sur échec, comme sendRappelVeilleEmail : l'appelant s'en sert comme seul
+ * signal pour savoir si l'envoi a réussi et retenter plus tard.
  */
 export async function sendDigestAgatheEmail(
   rendezVous: { nom: string; prenom: string; societe: string }[],
 ) {
-  if (!process.env.RESEND_API_KEY) {
-    throw new Error("RESEND_API_KEY manquante.");
+  if (!GMAIL_SMTP_USER || !process.env.GMAIL_SMTP_APP_PASSWORD) {
+    throw new Error("GMAIL_SMTP_USER / GMAIL_SMTP_APP_PASSWORD manquants.");
   }
 
-  await resend.emails.send({
-    from: MAIL_FROM,
+  const html = await render(<DigestAgatheEmail rendezVous={rendezVous} />);
+
+  await gmailTransport.sendMail({
+    from: GMAIL_SMTP_USER,
     to: MAIL_TO_AGATHE,
     subject: `${rendezVous.length} nouveau${rendezVous.length > 1 ? "x" : ""} rendez-vous aujourd'hui`,
-    react: <DigestAgatheEmail rendezVous={rendezVous} />,
+    html,
   });
 }
 
