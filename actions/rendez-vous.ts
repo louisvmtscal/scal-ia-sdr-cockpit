@@ -75,7 +75,7 @@ export async function createRendezVousAction(
   }
 
   await prisma.rendezVous.create({
-    data: { ...buildData(parsed.data), commercialId, dateRDV },
+    data: { ...buildData(parsed.data), commercialId, dateRDV, digestAgatheEnvoye: false },
   });
 
   revalidateRendezVous();

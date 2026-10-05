@@ -175,6 +175,13 @@ model RendezVous {
   rappelVeilleEnvoye   Boolean   @default(false)
   rappelVeilleEnvoyeAt DateTime?
 
+  // --- Digest Agathe (17h45 Europe/Paris) : nouveaux RDV du jour, pour retrait des listes de
+  // prospection. Défaut à true pour que l'historique existant au moment de l'ajout de la colonne
+  // ne déclenche pas un digest rétroactif — seuls les RDV créés après (sheet-sync ou création
+  // manuelle) sont explicitement mis à false et donc éligibles. ---
+  digestAgatheEnvoye   Boolean   @default(true)
+  digestAgatheEnvoyeAt DateTime?
+
   firefliesMeetingId    String?   @unique
   firefliesMeetingTitle String?
   firefliesMeetingDate  DateTime?

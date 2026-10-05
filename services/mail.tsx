@@ -1,6 +1,6 @@
 import { CompteRenduEmail } from "@/emails/compte-rendu-email";
+import { DigestAgatheEmail } from "@/emails/digest-agathe-email";
 import { EmailJ25NotificationEmail } from "@/emails/email-j25-notification-email";
-import { NouveauRdvAgatheEmail } from "@/emails/nouveau-rdv-agathe-email";
 import { PreparationEmail } from "@/emails/preparation-email";
 import { RappelVeilleEmail } from "@/emails/rappel-veille-email";
 import {
@@ -104,31 +104,24 @@ export async function sendEmailJ25NotificationEmail(rendezVous: RendezVous, emai
 }
 
 /**
- * Notifie Agathe d'un nouveau RDV créé via la sync Google Sheet, pour
- * qu'elle le retire des listes de prospection. Jamais pour les RDV créés
- * manuellement dans le Cockpit — uniquement ceux importés du Sheet.
+ * Digest quotidien (17h45 Europe/Paris) à Agathe des nouveaux RDV du jour, pour
+ * qu'elle les retire des listes de prospection. N'est appelé que s'il y a au
+ * moins un RDV à signaler (voir services/digest-agathe.ts). Comme
+ * sendRappelVeilleEmail, lève une erreur sur échec : l'appelant s'en sert
+ * comme seul signal pour savoir si l'envoi a réussi et retenter plus tard.
  */
-export async function sendNouveauRdvAgatheEmail(rendezVous: {
-  nom: string;
-  prenom: string;
-  societe: string;
-}) {
+export async function sendDigestAgatheEmail(
+  rendezVous: { nom: string; prenom: string; societe: string }[],
+) {
   if (!process.env.RESEND_API_KEY) {
-    console.warn("RESEND_API_KEY manquante : notification Agathe non envoyée.");
-    return;
+    throw new Error("RESEND_API_KEY manquante.");
   }
 
   await resend.emails.send({
     from: MAIL_FROM,
     to: MAIL_TO_AGATHE,
-    subject: `Nouveau rendez-vous : ${rendezVous.nom} ${rendezVous.prenom} (${rendezVous.societe})`,
-    react: (
-      <NouveauRdvAgatheEmail
-        nom={rendezVous.nom}
-        prenom={rendezVous.prenom}
-        societe={rendezVous.societe}
-      />
-    ),
+    subject: `${rendezVous.length} nouveau${rendezVous.length > 1 ? "x" : ""} rendez-vous aujourd'hui`,
+    react: <DigestAgatheEmail rendezVous={rendezVous} />,
   });
 }
 
