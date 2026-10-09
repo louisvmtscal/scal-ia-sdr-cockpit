@@ -1,6 +1,7 @@
 "use client";
 
 import { CalendarCheck2Icon, LayoutDashboardIcon, SettingsIcon, ZapIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ComponentProps } from "react";
@@ -47,9 +48,13 @@ export function AppSidebar({
               size="lg"
               render={
                 <Link href="/">
-                  <div className="bg-primary text-primary-foreground flex size-8 items-center justify-center rounded-lg text-sm font-semibold">
-                    S
-                  </div>
+                  <Image
+                    src="/logo-scalia.png"
+                    alt="Scal-IA"
+                    width={32}
+                    height={32}
+                    className="size-8 shrink-0 rounded-lg object-contain"
+                  />
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-medium">Scal-IA</span>
                     <span className="text-muted-foreground truncate text-xs">Cockpit SDR</span>
