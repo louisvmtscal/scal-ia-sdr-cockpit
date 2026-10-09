@@ -187,6 +187,10 @@ model RendezVous {
   firefliesMeetingDate  DateTime?
   firefliesMeetingUrl   String?
 
+  // --- Synchro calendrier (RDV pris via lien de prise de RDV HubSpot, lu depuis le flux
+  // iCal du Google Calendar connecté — voir services/calendar-sync.ts) ---
+  calendarEventId String? @unique
+
   notesInternes RendezVousNote[]
 
   createdAt DateTime @default(now())
