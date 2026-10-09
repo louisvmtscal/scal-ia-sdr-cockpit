@@ -7,8 +7,17 @@ import { prisma } from "@/lib/prisma";
 /** Portée d'accès aux données : un SDR ne voit que ses propres RDV, admin/manager voient tout. */
 export type Scope = { userId: string; role: Role };
 
-function scopeWhere(scope: Scope) {
-  return scope.role === "SDR" ? { commercialId: scope.userId } : {};
+/**
+ * `commercialIdFiltre` : filtre optionnel (admin/manager uniquement, via le
+ * sélecteur SDR du dashboard) pour restreindre la vue à un seul commercial
+ * sans changer de compte. Un SDR reste toujours cantonné à ses propres RDV,
+ * quelle que soit la valeur passée — ce paramètre n'a d'effet que pour
+ * admin/manager.
+ */
+function scopeWhere(scope: Scope, commercialIdFiltre?: string) {
+  if (scope.role === "SDR") return { commercialId: scope.userId };
+  if (commercialIdFiltre) return { commercialId: commercialIdFiltre };
+  return {};
 }
 
 function sommePrimes(rendezVous: Array<{ origine: Origine }>) {
@@ -30,8 +39,12 @@ export async function getRendezVousById(id: string) {
   return prisma.rendezVous.findUnique({ where: { id } });
 }
 
-export async function getDashboardStats(scope: Scope, periode: { start: Date; end: Date }) {
-  const where = scopeWhere(scope);
+export async function getDashboardStats(
+  scope: Scope,
+  periode: { start: Date; end: Date },
+  commercialIdFiltre?: string,
+) {
+  const where = scopeWhere(scope, commercialIdFiltre);
   const now = new Date();
   const dansLaPeriode = { gte: periode.start, lte: periode.end };
   // "Écoulé" = la portion de la période déjà arrivée à date — sert de dénominateur
@@ -98,12 +111,12 @@ export async function getDashboardStats(scope: Scope, periode: { start: Date; en
 }
 
 /** Nombre de RDV bookés par semaine, d'après la date de création (l'upload du RDV), pas la date du meeting. */
-export async function getWeeklySeries(scope: Scope, weeksCount = 8) {
+export async function getWeeklySeries(scope: Scope, weeksCount = 8, commercialIdFiltre?: string) {
   const now = new Date();
   const rangeStart = startOfWeek(subWeeks(now, weeksCount - 1), { weekStartsOn: 1 });
 
   const rendezVous = await prisma.rendezVous.findMany({
-    where: { ...scopeWhere(scope), createdAt: { gte: rangeStart } },
+    where: { ...scopeWhere(scope, commercialIdFiltre), createdAt: { gte: rangeStart } },
     select: { createdAt: true },
   });
 

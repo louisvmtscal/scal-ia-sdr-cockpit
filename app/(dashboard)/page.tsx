@@ -11,31 +11,36 @@ import {
 import { redirect } from "next/navigation";
 
 import { PeriodFilter } from "@/components/dashboard/period-filter";
+import { SdrFilter } from "@/components/dashboard/sdr-filter";
 import { StatCard } from "@/components/dashboard/stat-card";
 import { WeeklyChart } from "@/components/dashboard/weekly-chart";
 import { FadeIn } from "@/components/shared/fade-in";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { auth } from "@/lib/auth";
 import { PERIOD_SHORT_LABELS, resolvePeriodRange } from "@/lib/dashboard-period";
+import { getTeamMembers } from "@/lib/team";
 import { getDashboardStats, getWeeklySeries } from "@/services/rendez-vous";
 import { formatCurrency, formatPercent } from "@/utils/format";
 
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ period?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ period?: string; from?: string; to?: string; commercial?: string }>;
 }) {
   const session = await auth();
   if (!session?.user) {
     redirect("/connexion");
   }
   const scope = { userId: session.user.id, role: session.user.role };
+  const estAdminOuManager = scope.role !== "SDR";
 
-  const periode = resolvePeriodRange(await searchParams);
+  const { commercial: commercialIdFiltre, ...periodParams } = await searchParams;
+  const periode = resolvePeriodRange(periodParams);
 
-  const [stats, weeklySeries] = await Promise.all([
-    getDashboardStats(scope, { start: periode.start, end: periode.end }),
-    getWeeklySeries(scope),
+  const [stats, weeklySeries, teamMembers] = await Promise.all([
+    getDashboardStats(scope, { start: periode.start, end: periode.end }, commercialIdFiltre),
+    getWeeklySeries(scope, 8, commercialIdFiltre),
+    estAdminOuManager ? getTeamMembers() : Promise.resolve([]),
   ]);
 
   const periodeCourt = PERIOD_SHORT_LABELS[periode.key];
@@ -88,7 +93,10 @@ export default async function DashboardPage({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        {estAdminOuManager ? (
+          <SdrFilter teamMembers={teamMembers} current={commercialIdFiltre} />
+        ) : null}
         <PeriodFilter current={periode} />
       </div>
 

@@ -13,16 +13,25 @@ import {
   startOfQuarter,
   startOfWeek,
   startOfYear,
+  subMonths,
 } from "date-fns";
 import { fr } from "date-fns/locale";
 
-export const PERIOD_KEYS = ["semaine", "mois", "trimestre", "annee", "personnalise"] as const;
+export const PERIOD_KEYS = [
+  "semaine",
+  "mois",
+  "mois_precedent",
+  "trimestre",
+  "annee",
+  "personnalise",
+] as const;
 export type PeriodKey = (typeof PERIOD_KEYS)[number];
 
 /** Libellés affichés dans le sélecteur de période. */
 export const PERIOD_LABELS: Record<PeriodKey, string> = {
   semaine: "Cette semaine",
   mois: "Ce mois-ci",
+  mois_precedent: "Le mois précédent",
   trimestre: "Ce trimestre",
   annee: "Cette année",
   personnalise: "Période personnalisée",
@@ -32,6 +41,7 @@ export const PERIOD_LABELS: Record<PeriodKey, string> = {
 export const PERIOD_SHORT_LABELS: Record<PeriodKey, string> = {
   semaine: "cette semaine",
   mois: "ce mois-ci",
+  mois_precedent: "le mois précédent",
   trimestre: "ce trimestre",
   annee: "cette année",
   personnalise: "sur la période",
@@ -79,6 +89,18 @@ export function resolvePeriodRange(searchParams: {
       start,
       end,
       label: `Semaine du ${format(start, "d MMM", { locale: fr })} au ${format(end, "d MMM yyyy", { locale: fr })}`,
+    };
+  }
+
+  if (key === "mois_precedent") {
+    const moisPrecedent = subMonths(now, 1);
+    const start = startOfMonth(moisPrecedent);
+    const end = endOfMonth(moisPrecedent);
+    return {
+      key,
+      start,
+      end,
+      label: capitalize(format(moisPrecedent, "MMMM yyyy", { locale: fr })),
     };
   }
 
