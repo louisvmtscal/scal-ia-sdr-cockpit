@@ -58,8 +58,8 @@ export function PeriodFilter({ current }: { current: { key: PeriodKey; start: Da
   return (
     <div className="flex items-center gap-2">
       <Select value={selectedKey} onValueChange={handlePeriodChange}>
-        <SelectTrigger className="w-36">
-          <SelectValue />
+        <SelectTrigger className="w-48">
+          <SelectValue>{(value: string) => PERIOD_LABELS[value as PeriodKey]}</SelectValue>
         </SelectTrigger>
         <SelectContent>
           {PERIOD_KEYS.map((key) => (

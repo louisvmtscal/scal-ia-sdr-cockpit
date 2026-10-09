@@ -19,21 +19,22 @@ import { fr } from "date-fns/locale";
 export const PERIOD_KEYS = ["semaine", "mois", "trimestre", "annee", "personnalise"] as const;
 export type PeriodKey = (typeof PERIOD_KEYS)[number];
 
+/** Libellés affichés dans le sélecteur de période. */
 export const PERIOD_LABELS: Record<PeriodKey, string> = {
-  semaine: "Semaine",
-  mois: "Mois",
-  trimestre: "Trimestre",
-  annee: "Année",
-  personnalise: "Personnalisé",
+  semaine: "Cette semaine",
+  mois: "Ce mois-ci",
+  trimestre: "Ce trimestre",
+  annee: "Cette année",
+  personnalise: "Période personnalisée",
 };
 
-/** Forme courte utilisée dans les libellés de stats ("RDV {court}", "Sur les RDV {court}..."). */
+/** Forme courte utilisée dans les libellés de stats ("RDV prévus {court}", "RDV pris {court}"). */
 export const PERIOD_SHORT_LABELS: Record<PeriodKey, string> = {
   semaine: "cette semaine",
-  mois: "ce mois",
+  mois: "ce mois-ci",
   trimestre: "ce trimestre",
   annee: "cette année",
-  personnalise: "de la période",
+  personnalise: "sur la période",
 };
 
 export type PeriodRange = { key: PeriodKey; start: Date; end: Date; label: string };

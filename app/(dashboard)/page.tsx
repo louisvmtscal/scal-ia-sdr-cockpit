@@ -42,47 +42,47 @@ export default async function DashboardPage({
 
   const statCards = [
     {
-      label: `RDV ${periodeCourt}`,
+      label: `RDV prévus ${periodeCourt}`,
       value: String(stats.totalPeriode),
       icon: CalendarIcon,
-      hint: "Meeting prévu dans la période, quelle que soit sa date de booking",
+      hint: "Date du rendez-vous dans la période, quelle que soit la date à laquelle il a été pris",
     },
     {
-      label: `RDV bookés ${periodeCourt}`,
+      label: `RDV pris ${periodeCourt}`,
       value: String(stats.bookesPeriode),
       icon: PhoneOutgoingIcon,
-      hint: "Décroché dans la période, quelle que soit la date du meeting",
+      hint: "Date de prise du rendez-vous dans la période, quelle que soit la date du rendez-vous",
     },
     {
-      label: "RDV honoré et qualifié",
+      label: "RDV honorés et qualifiés",
       value: `${stats.honoreEtQualifie} / ${stats.periodeEcoulee}`,
       icon: CheckCircle2Icon,
-      hint: `RDV ${periodeCourt} déjà passés à date`,
+      hint: `Déjà passés à ce jour — ${periode.label}`,
     },
     {
       label: "Taux de présence",
       value: formatPercent(stats.tauxPresence),
       icon: GaugeIcon,
-      hint: `Sur les RDV ${periodeCourt} déjà passés à date`,
+      hint: `Sur les RDV déjà passés à ce jour — ${periode.label}`,
     },
     {
       label: "Taux de qualification",
       value: formatPercent(stats.tauxQualification),
       icon: TargetIcon,
-      hint: "Sur les RDV honorés",
+      hint: `Sur les RDV honorés uniquement — ${periode.label}`,
     },
     {
       label: "Mes primes",
       value: formatCurrency(stats.mesPrimes),
       icon: CoinsIcon,
       hint: `RDV honorés et qualifiés — ${periode.label}`,
-      microHint: `Mes primes totales : ${formatCurrency(stats.mesPrimesTotal)}`,
+      microHint: `Primes totales depuis le début : ${formatCurrency(stats.mesPrimesTotal)}`,
     },
     {
       label: "Primes potentielles",
       value: formatCurrency(stats.primesPotentielles),
       icon: PiggyBankIcon,
-      hint: "RDV en attente",
+      hint: "RDV dont le statut n'est pas encore renseigné",
     },
   ];
 
@@ -103,7 +103,7 @@ export default async function DashboardPage({
       <FadeIn delay={0.2}>
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">RDV bookés par semaine</CardTitle>
+            <CardTitle className="text-base">RDV pris par semaine</CardTitle>
           </CardHeader>
           <CardContent>
             <WeeklyChart data={weeklySeries} />
