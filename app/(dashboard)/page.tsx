@@ -1,12 +1,4 @@
-import {
-  CalendarIcon,
-  CheckCircle2Icon,
-  CoinsIcon,
-  GaugeIcon,
-  PhoneOutgoingIcon,
-  PiggyBankIcon,
-  TargetIcon,
-} from "lucide-react";
+import { CalendarIcon, CheckCircle2Icon, CoinsIcon, GaugeIcon, PhoneOutgoingIcon, TargetIcon } from "lucide-react";
 
 import { redirect } from "next/navigation";
 
@@ -45,6 +37,18 @@ export default async function DashboardPage({
 
   const periodeCourt = PERIOD_SHORT_LABELS[periode.key];
 
+  const prenom = (nomOuEmail: string) => nomOuEmail.split("@")[0].split(" ")[0];
+  const labelMesPrimes =
+    estAdminOuManager && !commercialIdFiltre
+      ? `Primes totales ${periodeCourt}`
+      : `Primes ${prenom(
+          estAdminOuManager
+            ? (teamMembers.find((m) => m.id === commercialIdFiltre)?.name ??
+                teamMembers.find((m) => m.id === commercialIdFiltre)?.email ??
+                "")
+            : (session.user.name ?? session.user.email ?? ""),
+        )} ${periodeCourt}`;
+
   const statCards = [
     {
       label: `RDV prévus ${periodeCourt}`,
@@ -77,17 +81,11 @@ export default async function DashboardPage({
       hint: `Sur les RDV honorés uniquement — ${periode.label}`,
     },
     {
-      label: "Mes primes",
+      label: labelMesPrimes,
       value: formatCurrency(stats.mesPrimes),
       icon: CoinsIcon,
       hint: `RDV honorés et qualifiés — ${periode.label}`,
       microHint: `Primes totales depuis le début : ${formatCurrency(stats.mesPrimesTotal)}`,
-    },
-    {
-      label: "Primes potentielles",
-      value: formatCurrency(stats.primesPotentielles),
-      icon: PiggyBankIcon,
-      hint: "RDV dont le statut n'est pas encore renseigné",
     },
   ];
 
