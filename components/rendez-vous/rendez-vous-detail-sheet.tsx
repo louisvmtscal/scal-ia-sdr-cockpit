@@ -11,7 +11,13 @@ import {
 } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import type { Role, SmsStatus, WhatsappStatus } from "@/lib/generated/prisma/enums";
+import type {
+  CompteRenduStatus,
+  FirefliesMatchConfiance,
+  Role,
+  SmsStatus,
+  WhatsappStatus,
+} from "@/lib/generated/prisma/enums";
 
 import { EmailJ25Section } from "./email-j25-section";
 import { FirefliesSection } from "./fireflies-section";
@@ -34,7 +40,10 @@ export function RendezVousDetailSheet({
   firefliesMeetingTitle,
   firefliesMeetingDate,
   firefliesMeetingUrl,
+  firefliesMatchConfiance,
+  firefliesSyncError,
   compteRendu,
+  compteRenduStatus,
   emailJ25,
   telephone,
   whatsappJ1Status,
@@ -60,7 +69,10 @@ export function RendezVousDetailSheet({
   firefliesMeetingTitle: string | null;
   firefliesMeetingDate: Date | null;
   firefliesMeetingUrl: string | null;
+  firefliesMatchConfiance: FirefliesMatchConfiance | null;
+  firefliesSyncError: string | null;
   compteRendu: unknown;
+  compteRenduStatus: CompteRenduStatus;
   emailJ25: unknown;
   telephone: string | null;
   whatsappJ1Status: WhatsappStatus;
@@ -136,7 +148,10 @@ export function RendezVousDetailSheet({
                 firefliesMeetingTitle={firefliesMeetingTitle}
                 firefliesMeetingDate={firefliesMeetingDate}
                 firefliesMeetingUrl={firefliesMeetingUrl}
+                firefliesMatchConfiance={firefliesMatchConfiance}
+                firefliesSyncError={firefliesSyncError}
                 compteRendu={compteRendu}
+                compteRenduStatus={compteRenduStatus}
               />
             </AccordionPanel>
           </AccordionItem>

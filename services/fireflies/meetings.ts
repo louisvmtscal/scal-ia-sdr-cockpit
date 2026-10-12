@@ -11,6 +11,7 @@ const MEETING_FIELDS = `
   transcript_url
   meeting_link
   organizer_email
+  calendar_id
   meeting_attendees {
     displayName
     name
@@ -47,6 +48,16 @@ const TRANSCRIPT_QUERY = `
   }
 `;
 
+// Fenêtre glissante par date (synchro quotidienne) — pas de mot-clé, pagination par `skip`.
+// Confirmé disponible sur l'API Fireflies (testé manuellement le 2026-10-12).
+const LIST_BY_DATE_QUERY = `
+  query ListTranscripts($fromDate: DateTime, $toDate: DateTime, $limit: Int, $skip: Int) {
+    transcripts(fromDate: $fromDate, toDate: $toDate, limit: $limit, skip: $skip) {
+      ${MEETING_FIELDS}
+    }
+  }
+`;
+
 type RawAttendee = { displayName: string | null; name: string | null; email: string | null };
 
 type RawMeeting = {
@@ -57,6 +68,7 @@ type RawMeeting = {
   transcript_url: string | null;
   meeting_link: string | null;
   organizer_email: string | null;
+  calendar_id: string | null;
   meeting_attendees: RawAttendee[] | null;
 };
 
@@ -71,6 +83,7 @@ function normalizeMeeting(raw: RawMeeting): FirefliesMeeting {
     transcriptUrl: raw.transcript_url ?? null,
     meetingLink: raw.meeting_link ?? null,
     organizerEmail: raw.organizer_email ?? null,
+    calendarId: raw.calendar_id ?? null,
     attendees: (raw.meeting_attendees ?? []).map((attendee) => ({
       name: attendee.displayName ?? attendee.name ?? null,
       email: attendee.email ?? null,
@@ -127,6 +140,37 @@ export async function getTranscript(meetingId: string): Promise<FirefliesFullTra
     meeting: normalizeMeeting(data.transcript),
     sentences: sentences.map(normalizeSentence),
   };
+}
+
+const LIST_PAGE_SIZE = 50;
+
+/**
+ * Liste toutes les réunions Fireflies dont la date tombe dans [fromDate, toDate],
+ * tous mots-clés confondus — utilisée par la synchro quotidienne (fenêtre
+ * glissante) pour rattraper les transcriptions publiées en retard ou un
+ * éventuel webhook manqué. Pagine automatiquement (l'API retourne au plus
+ * `LIST_PAGE_SIZE` réunions par appel).
+ */
+export async function listTranscripts(fromDate: Date, toDate: Date): Promise<FirefliesMeeting[]> {
+  const meetings: FirefliesMeeting[] = [];
+  let skip = 0;
+
+  for (;;) {
+    const data = await firefliesRequest<{ transcripts: RawMeeting[] }>(LIST_BY_DATE_QUERY, {
+      fromDate: fromDate.toISOString(),
+      toDate: toDate.toISOString(),
+      limit: LIST_PAGE_SIZE,
+      skip,
+    });
+
+    const page = data.transcripts ?? [];
+    meetings.push(...page.map(normalizeMeeting));
+
+    if (page.length < LIST_PAGE_SIZE) break;
+    skip += LIST_PAGE_SIZE;
+  }
+
+  return meetings;
 }
 
 /** Reconstitue un texte lisible (locuteur: propos) à partir d'une transcription complète. */

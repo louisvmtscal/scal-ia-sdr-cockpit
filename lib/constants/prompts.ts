@@ -12,7 +12,9 @@ Règles strictes :
 - Style professionnel, commercial, concis et factuel : privilégie les bullets courtes plutôt que de longs paragraphes, pour une relecture rapide avant un prochain échange.
 - La Qualification et le Niveau d'intérêt sont des propositions déduites de l'échange, jamais des affirmations catégoriques si la transcription ne permet pas de trancher clairement (utilise "À confirmer" en cas de doute).
 - La Prochaine action doit être unique, concrète et actionnable — pas une liste de plusieurs actions.
-- Utilise le vocabulaire Scal-IA quand c'est pertinent (signaux d'achat, ICP, pipeline qualifié, scoring, multicanal, personnalisation), sans jamais l'imposer artificiellement sur des propos qui n'en relèvent pas.`;
+- Utilise le vocabulaire Scal-IA quand c'est pertinent (signaux d'achat, ICP, pipeline qualifié, scoring, multicanal, personnalisation), sans jamais l'imposer artificiellement sur des propos qui n'en relèvent pas.
+- Citations clés : reprends mot pour mot une ou deux phrases du prospect (jamais reformulées) utiles pour la vente — une objection, un besoin fort, une contrainte. Exactement "Non mentionné" si rien ne s'y prête.
+- Qualité de la transcription : si elle semble incomplète, tronquée ou manifestement dégradée (coupures, portions inaudibles, ne couvre qu'une partie de l'échange), dis-le explicitement. Sinon écris exactement "Transcription complète et exploitable".`;
 
 export const DEFAULT_PREPARATION_PROMPT = `Tu es l'assistant commercial de Scal-IA, agence de prospection spécialisée en IA.
 

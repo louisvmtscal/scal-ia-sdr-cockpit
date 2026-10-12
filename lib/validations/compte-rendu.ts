@@ -36,6 +36,16 @@ export const compteRenduSchema = z.object({
       "Proposition de qualification déduite de l'échange — reste une proposition, jamais appliquée automatiquement au statut du rendez-vous.",
     ),
   prochaineAction: z.string().describe("Une seule prochaine action, concrète et actionnable."),
+  citationsCles: z
+    .string()
+    .describe(
+      `Une ou deux citations exactes et utiles à la vente, entre guillemets, mot pour mot. Exactement "${NON_MENTIONNE}" si aucune citation marquante.`,
+    ),
+  qualiteTranscript: z
+    .string()
+    .describe(
+      'Signale si la transcription est incomplète, tronquée ou de mauvaise qualité (ex: "Transcription incomplète : semble s\'arrêter avant la fin de l\'échange"). Exactement "Transcription complète et exploitable" si aucun problème constaté.',
+    ),
 });
 
 export type CompteRendu = z.infer<typeof compteRenduSchema>;
@@ -52,6 +62,8 @@ export const COMPTE_RENDU_SECTIONS: Array<{ key: keyof CompteRendu; label: strin
   { key: "niveauInteret", label: "Niveau d'intérêt" },
   { key: "qualification", label: "Qualification" },
   { key: "prochaineAction", label: "Prochaine action" },
+  { key: "citationsCles", label: "Citations clés" },
+  { key: "qualiteTranscript", label: "Qualité de la transcription" },
 ];
 
 /**
@@ -98,6 +110,9 @@ export function formatCompteRenduForClipboard(
     "",
     "QUALIFICATION",
     compteRendu.qualification,
+    "",
+    "CITATIONS CLÉS",
+    compteRendu.citationsCles,
     "",
     "PROCHAINE ACTION",
     compteRendu.prochaineAction,

@@ -106,6 +106,26 @@ enum WhatsappStatus {
   FAILED
 }
 
+/**
+ * Fiabilité du rapprochement automatique transcript Fireflies <-> RDV.
+ * FIABLE : email du prospect retrouvé parmi les participants Fireflies (ou,
+ * si un jour disponible des deux côtés, même identifiant de calendrier).
+ * A_VERIFIER : un seul candidat plausible mais uniquement sur proximité de
+ * date (pas d'email dans les participants Fireflies) — jamais sur le nom.
+ * Null : aucun transcript associé.
+ */
+enum FirefliesMatchConfiance {
+  FIABLE
+  A_VERIFIER
+}
+
+/** Statut de génération du compte rendu IA (Claude) à partir du transcript. */
+enum CompteRenduStatus {
+  EN_ATTENTE
+  GENERE
+  ECHEC
+}
+
 model RendezVous {
   id String @id @default(cuid())
 
@@ -182,10 +202,20 @@ model RendezVous {
   digestAgatheEnvoye   Boolean   @default(true)
   digestAgatheEnvoyeAt DateTime?
 
-  firefliesMeetingId    String?   @unique
-  firefliesMeetingTitle String?
-  firefliesMeetingDate  DateTime?
-  firefliesMeetingUrl   String?
+  firefliesMeetingId      String?                  @unique
+  firefliesMeetingTitle   String?
+  firefliesMeetingDate    DateTime?
+  firefliesMeetingUrl     String?
+  // Confiance du rapprochement automatique (null tant qu'aucun transcript n'est associé).
+  firefliesMatchConfiance FirefliesMatchConfiance?
+  // Horodatage du dernier passage de la synchro quotidienne pour ce RDV (succès ou échec).
+  firefliesLastSyncAt     DateTime?
+  // Dernier message d'erreur de synchro Fireflies pour ce RDV ; effacé dès qu'une synchro réussit.
+  firefliesSyncError      String?
+
+  // Statut de génération du compte rendu IA — déclenché automatiquement dès
+  // qu'un transcript est associé avec confiance FIABLE (voir services/fireflies/sync.ts).
+  compteRenduStatus CompteRenduStatus @default(EN_ATTENTE)
 
   // --- Synchro calendrier (RDV pris via lien de prise de RDV HubSpot, lu depuis le flux
   // iCal du Google Calendar connecté — voir services/calendar-sync.ts) ---

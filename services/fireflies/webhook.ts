@@ -1,72 +1,18 @@
 import "server-only";
 
-import { addDays, subDays } from "date-fns";
-
-import type { RendezVous } from "@/lib/generated/prisma/client";
 import { prisma } from "@/lib/prisma";
 
+import { declencherCompteRenduAutomatique } from "./auto-compte-rendu";
 import { getTranscript } from "./meetings";
-import type { FirefliesFullTranscript } from "./types";
-
-/**
- * Fait correspondre une transcription Fireflies à un rendez-vous existant.
- * Priorité à l'email des participants (fiable) ; à défaut, correspondance sur
- * le nom du contact parmi les rendez-vous proches de la date de la réunion
- * (nos données actuelles n'incluent pas toujours l'email du contact).
- */
-async function trouverRendezVousCorrespondant(
-  transcript: FirefliesFullTranscript,
-  meetingDate: Date,
-): Promise<RendezVous | null> {
-  const candidats = await prisma.rendezVous.findMany({
-    where: {
-      firefliesMeetingId: null,
-      dateRDV: { gte: subDays(meetingDate, 3), lte: addDays(meetingDate, 3) },
-    },
-  });
-
-  const attendeeEmails = transcript.meeting.attendees
-    .map((a) => a.email?.toLowerCase().trim())
-    .filter((email): email is string => Boolean(email));
-
-  const attendeeNames = transcript.meeting.attendees
-    .map((a) => (a.name ?? "").toLowerCase().trim())
-    .filter(Boolean);
-
-  let meilleur: { rendezVous: RendezVous; score: number } | null = null;
-
-  for (const rdv of candidats) {
-    let score = 0;
-
-    if (rdv.email && attendeeEmails.includes(rdv.email.toLowerCase())) {
-      score += 10;
-    }
-
-    const nomComplet = `${rdv.prenom} ${rdv.nom}`.toLowerCase();
-    const nomInverse = `${rdv.nom} ${rdv.prenom}`.toLowerCase();
-    const correspondNom = attendeeNames.some(
-      (nom) => nom.includes(nomComplet) || nom.includes(nomInverse) || nomComplet.includes(nom),
-    );
-    if (correspondNom) {
-      score += 5;
-    }
-
-    if (score > 0 && (!meilleur || score > meilleur.score)) {
-      meilleur = { rendezVous: rdv, score };
-    }
-  }
-
-  return meilleur?.rendezVous ?? null;
-}
+import { trouverCorrespondance } from "./matching";
 
 /**
  * Traite une transcription Fireflies terminée : retrouve le rendez-vous
- * correspondant et lie la réunion (id/titre/date/url) pour qu'elle apparaisse
- * directement dans le dialogue Fireflies, sans nouvelle recherche.
- *
- * Ne génère JAMAIS de compte rendu automatiquement : la génération reste
- * strictement manuelle, à l'initiative de l'utilisateur, via le bouton
- * "Générer le compte rendu" dans le dialogue Fireflies.
+ * correspondant (voir `trouverCorrespondance`), lie la réunion et déclenche
+ * la génération automatique du compte rendu si le rapprochement est fiable.
+ * Un rapprochement "à vérifier" est quand même enregistré (pour apparaître
+ * dans la fiche RDV avec un badge) mais ne déclenche jamais de compte rendu
+ * automatique tant qu'un humain ne l'a pas confirmé.
  */
 export async function traiterTranscriptionFireflies(meetingId: string) {
   const dejaTraite = await prisma.rendezVous.findUnique({
@@ -81,9 +27,9 @@ export async function traiterTranscriptionFireflies(meetingId: string) {
   const transcript = await getTranscript(meetingId);
   const meetingDate = transcript.meeting.date ?? new Date();
 
-  const rendezVous = await trouverRendezVousCorrespondant(transcript, meetingDate);
+  const resultat = await trouverCorrespondance(transcript.meeting, meetingDate);
 
-  if (!rendezVous) {
+  if (resultat.issue === "AUCUNE") {
     console.warn(
       `[fireflies] Aucun rendez-vous correspondant pour la transcription ${meetingId} ("${transcript.meeting.title}"). Traitement manuel requis.`,
     );
@@ -91,12 +37,19 @@ export async function traiterTranscriptionFireflies(meetingId: string) {
   }
 
   await prisma.rendezVous.update({
-    where: { id: rendezVous.id },
+    where: { id: resultat.rendezVousId },
     data: {
       firefliesMeetingId: meetingId,
       firefliesMeetingTitle: transcript.meeting.title,
       firefliesMeetingDate: transcript.meeting.date,
       firefliesMeetingUrl: transcript.meeting.transcriptUrl,
+      firefliesMatchConfiance: resultat.issue,
+      firefliesLastSyncAt: new Date(),
+      firefliesSyncError: null,
     },
   });
+
+  if (resultat.issue === "FIABLE") {
+    await declencherCompteRenduAutomatique(resultat.rendezVousId, transcript);
+  }
 }

@@ -1,7 +1,9 @@
 "use client";
 
 import {
+  AlertTriangleIcon,
   ArrowLeftIcon,
+  CheckIcon,
   ClipboardIcon,
   CopyIcon,
   ExternalLinkIcon,
@@ -11,13 +13,16 @@ import {
   SearchIcon,
   SparklesIcon,
   UsersIcon,
+  XIcon,
 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import {
+  confirmerRapprochementFirefliesAction,
   getTranscriptionFirefliesAction,
   rechercherReunionsFirefliesAction,
+  rejeterRapprochementFirefliesAction,
   selectionnerReunionFirefliesAction,
 } from "@/actions/fireflies";
 import { genererCompteRenduAction, modifierCompteRenduAction } from "@/actions/compte-rendu";
@@ -32,6 +37,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -42,6 +48,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import type { CompteRenduStatus, FirefliesMatchConfiance } from "@/lib/generated/prisma/enums";
+import {
+  COMPTE_RENDU_STATUS_LABELS,
+  FIREFLIES_STATUS_LABELS,
+  getFirefliesSyncStatus,
+} from "@/lib/fireflies-status";
 import {
   COMPTE_RENDU_SECTIONS,
   compteRenduSchema,
@@ -99,6 +111,7 @@ function CompteRenduBlock({
   dateRDV,
   transcript,
   compteRendu,
+  compteRenduStatus,
   onUpdate,
 }: {
   rendezVousId: string;
@@ -106,6 +119,7 @@ function CompteRenduBlock({
   dateRDV: Date;
   transcript: FirefliesFullTranscript;
   compteRendu: CompteRendu | null;
+  compteRenduStatus: CompteRenduStatus;
   onUpdate: (compteRendu: CompteRendu) => void;
 }) {
   const [isPending, startTransition] = useTransition();
@@ -175,10 +189,22 @@ function CompteRenduBlock({
       <p className="text-sm font-medium">Compte rendu</p>
 
       {!compteRendu ? (
-        <Button onClick={handleGenerer} disabled={isPending} size="sm" className="self-start">
-          {isPending ? <Loader2Icon className="animate-spin" /> : <SparklesIcon />}
-          {isPending ? "Génération du compte rendu..." : "Générer le compte rendu"}
-        </Button>
+        <div className="flex flex-col items-start gap-2">
+          {compteRenduStatus === "ECHEC" ? (
+            <Badge variant="destructive">
+              <AlertTriangleIcon />
+              {COMPTE_RENDU_STATUS_LABELS.ECHEC}
+            </Badge>
+          ) : null}
+          <Button onClick={handleGenerer} disabled={isPending} size="sm">
+            {isPending ? <Loader2Icon className="animate-spin" /> : <SparklesIcon />}
+            {isPending
+              ? "Génération du compte rendu..."
+              : compteRenduStatus === "ECHEC"
+                ? "Réessayer"
+                : "Générer le compte rendu"}
+          </Button>
+        </div>
       ) : isEditing && champs ? (
         <div className="flex flex-col gap-3">
           {COMPTE_RENDU_SECTIONS.map(({ key, label }) => (
@@ -300,7 +326,10 @@ export function FirefliesSection({
   firefliesMeetingTitle,
   firefliesMeetingDate,
   firefliesMeetingUrl,
+  firefliesMatchConfiance,
+  firefliesSyncError,
   compteRendu: initialCompteRendu,
+  compteRenduStatus: initialCompteRenduStatus,
 }: {
   rendezVousId: string;
   societe: string;
@@ -309,7 +338,10 @@ export function FirefliesSection({
   firefliesMeetingTitle: string | null;
   firefliesMeetingDate: Date | null;
   firefliesMeetingUrl: string | null;
+  firefliesMatchConfiance: FirefliesMatchConfiance | null;
+  firefliesSyncError: string | null;
   compteRendu: unknown;
+  compteRenduStatus: CompteRenduStatus;
 }) {
   const parsedCompteRendu = compteRenduSchema.safeParse(initialCompteRendu);
   const [vue, setVue] = useState<Vue>("recherche");
@@ -319,7 +351,40 @@ export function FirefliesSection({
   const [compteRendu, setCompteRendu] = useState<CompteRendu | null>(
     parsedCompteRendu.success ? parsedCompteRendu.data : null,
   );
+  const [confiance, setConfiance] = useState(firefliesMatchConfiance);
+  const [compteRenduStatus, setCompteRenduStatus] = useState(initialCompteRenduStatus);
   const [isPending, startTransition] = useTransition();
+
+  const statut = getFirefliesSyncStatus({
+    firefliesMeetingId,
+    firefliesMatchConfiance: confiance,
+    firefliesSyncError,
+  });
+
+  function handleConfirmer() {
+    startTransition(async () => {
+      const result = await confirmerRapprochementFirefliesAction(rendezVousId);
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      setConfiance("FIABLE");
+      setCompteRenduStatus("GENERE");
+      toast.success("Rapprochement confirmé — compte rendu en cours de génération.");
+    });
+  }
+
+  function handleRejeter() {
+    startTransition(async () => {
+      const result = await rejeterRapprochementFirefliesAction(rendezVousId);
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      setVue("resultats");
+      toast.success("Rapprochement rejeté — recherche manuelle disponible.");
+    });
+  }
 
   function handleRechercher() {
     startTransition(async () => {
@@ -376,15 +441,42 @@ export function FirefliesSection({
 
       {firefliesMeetingId && vue === "recherche" ? (
         <div className="flex flex-col gap-3 rounded-lg border p-4">
-          <p className="text-sm font-medium">Réunion déjà liée</p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-medium">Réunion déjà liée</p>
+            <Badge variant={statut === "ERREUR_SYNCHRONISATION" ? "destructive" : statut === "A_VERIFIER" ? "outline" : "secondary"}>
+              {statut === "A_VERIFIER" ? <AlertTriangleIcon /> : null}
+              {FIREFLIES_STATUS_LABELS[statut]}
+            </Badge>
+          </div>
           <div>
             <p className="text-sm">{firefliesMeetingTitle ?? "Réunion Fireflies"}</p>
             {firefliesMeetingDate ? (
               <p className="text-muted-foreground text-xs">{formatDate(firefliesMeetingDate)}</p>
             ) : null}
           </div>
+          {statut === "A_VERIFIER" ? (
+            <p className="text-muted-foreground text-xs">
+              Rapprochement proposé automatiquement (titre de la réunion) — à confirmer avant
+              génération du compte rendu.
+            </p>
+          ) : null}
+          {statut === "ERREUR_SYNCHRONISATION" && firefliesSyncError ? (
+            <p className="text-destructive text-xs">{firefliesSyncError}</p>
+          ) : null}
           <div className="flex flex-wrap gap-2">
-            <Button size="sm" onClick={handleVoirTranscriptionLiee} disabled={isPending}>
+            {statut === "A_VERIFIER" ? (
+              <>
+                <Button size="sm" onClick={handleConfirmer} disabled={isPending}>
+                  {isPending ? <Loader2Icon className="animate-spin" /> : <CheckIcon />}
+                  Confirmer
+                </Button>
+                <Button size="sm" variant="outline" onClick={handleRejeter} disabled={isPending}>
+                  <XIcon />
+                  Ce n&apos;est pas le bon RDV
+                </Button>
+              </>
+            ) : null}
+            <Button size="sm" variant="outline" onClick={handleVoirTranscriptionLiee} disabled={isPending}>
               {isPending ? <Loader2Icon className="animate-spin" /> : null}
               Voir la transcription
             </Button>
@@ -546,7 +638,11 @@ export function FirefliesSection({
             dateRDV={dateRDV}
             transcript={transcript}
             compteRendu={compteRendu}
-            onUpdate={setCompteRendu}
+            compteRenduStatus={compteRenduStatus}
+            onUpdate={(cr) => {
+              setCompteRendu(cr);
+              setCompteRenduStatus("GENERE");
+            }}
           />
         </div>
       ) : null}

@@ -89,3 +89,36 @@ export async function firefliesRequest<T>(
 
   return json.data as T;
 }
+
+const RETRYABLE_CODES: FirefliesErrorCode[] = ["NETWORK_ERROR", "TIMEOUT", "RATE_LIMITED"];
+const RETRY_DELAYS_MS = [1000, 3000, 8000];
+
+function attendre(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Exécute `fn` avec de nouvelles tentatives (backoff 1s/3s/8s) uniquement sur
+ * les erreurs transitoires (réseau, timeout, rate-limit) — jamais sur une clé
+ * invalide ou une erreur GraphQL, qui échoueront de la même façon à chaque
+ * essai. Réservé aux appels automatisés (synchro quotidienne) ; les actions
+ * déclenchées par un clic utilisateur échouent immédiatement pour rester réactives.
+ */
+export async function avecNouvellesTentatives<T>(fn: () => Promise<T>): Promise<T> {
+  let derniereErreur: unknown;
+
+  for (let tentative = 0; tentative <= RETRY_DELAYS_MS.length; tentative += 1) {
+    try {
+      return await fn();
+    } catch (error) {
+      derniereErreur = error;
+      const estRetryable = error instanceof FirefliesApiError && RETRYABLE_CODES.includes(error.code);
+      if (!estRetryable || tentative === RETRY_DELAYS_MS.length) {
+        throw error;
+      }
+      await attendre(RETRY_DELAYS_MS[tentative]);
+    }
+  }
+
+  throw derniereErreur;
+}

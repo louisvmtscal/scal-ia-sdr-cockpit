@@ -13,6 +13,9 @@ export type FirefliesMeeting = {
   meetingLink: string | null;
   organizerEmail: string | null;
   attendees: FirefliesAttendee[];
+  // Identifiant d'événement calendrier côté Fireflies, quand disponible (rarement
+  // renseigné en pratique — voir services/fireflies/webhook.ts pour son usage).
+  calendarId: string | null;
 };
 
 export type FirefliesSentence = {

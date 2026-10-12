@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { prisma } from "@/lib/prisma";
 import {
+  declencherCompteRenduAutomatique,
   FirefliesApiError,
   getTranscript,
   searchMeetings,
@@ -96,5 +97,69 @@ export async function selectionnerReunionFirefliesAction(
     return { success: true, transcript };
   } catch (error) {
     return { error: messageErreurFireflies(error) };
+  }
+}
+
+export type ConfirmerRapprochementResult = { success: true } | { error: string };
+
+/**
+ * Confirme un rapprochement automatique marqué "à vérifier" (voir
+ * services/fireflies/matching.ts) : passe la confiance à FIABLE et déclenche
+ * la génération du compte rendu, qui n'a jamais lieu tant que personne n'a
+ * confirmé que c'est le bon prospect.
+ */
+export async function confirmerRapprochementFirefliesAction(
+  rendezVousId: string,
+): Promise<ConfirmerRapprochementResult> {
+  const rdv = await prisma.rendezVous.findUnique({
+    where: { id: rendezVousId },
+    select: { firefliesMeetingId: true },
+  });
+
+  if (!rdv?.firefliesMeetingId) {
+    return { error: "Aucun transcript Fireflies associé à ce rendez-vous." };
+  }
+
+  try {
+    const transcript = await getTranscript(rdv.firefliesMeetingId);
+    await prisma.rendezVous.update({
+      where: { id: rendezVousId },
+      data: { firefliesMatchConfiance: "FIABLE", firefliesSyncError: null },
+    });
+    await declencherCompteRenduAutomatique(rendezVousId, transcript);
+    revalidatePath("/rendez-vous");
+    return { success: true };
+  } catch (error) {
+    return { error: messageErreurFireflies(error) };
+  }
+}
+
+export type RejeterRapprochementResult = { success: true } | { error: string };
+
+/**
+ * Rejette un rapprochement automatique marqué "à vérifier" : efface le lien
+ * Fireflies pour permettre une recherche manuelle (voir
+ * rechercherReunionsFirefliesAction) ou un nouveau passage de la synchro.
+ */
+export async function rejeterRapprochementFirefliesAction(
+  rendezVousId: string,
+): Promise<RejeterRapprochementResult> {
+  try {
+    await prisma.rendezVous.update({
+      where: { id: rendezVousId },
+      data: {
+        firefliesMeetingId: null,
+        firefliesMeetingTitle: null,
+        firefliesMeetingDate: null,
+        firefliesMeetingUrl: null,
+        firefliesMatchConfiance: null,
+        firefliesSyncError: null,
+      },
+    });
+    revalidatePath("/rendez-vous");
+    return { success: true };
+  } catch (error) {
+    console.error("Erreur rejet rapprochement Fireflies :", error);
+    return { error: "Le rejet du rapprochement a échoué." };
   }
 }

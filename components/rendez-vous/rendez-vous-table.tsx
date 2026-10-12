@@ -465,7 +465,10 @@ export function RendezVousTable({
                       firefliesMeetingTitle={row.firefliesMeetingTitle}
                       firefliesMeetingDate={row.firefliesMeetingDate}
                       firefliesMeetingUrl={row.firefliesMeetingUrl}
+                      firefliesMatchConfiance={row.firefliesMatchConfiance}
+                      firefliesSyncError={row.firefliesSyncError}
                       compteRendu={row.compteRendu}
+                      compteRenduStatus={row.compteRenduStatus}
                       emailJ25={row.emailJ25}
                       telephone={row.telephone}
                       whatsappJ1Status={row.whatsappJ1Status}
