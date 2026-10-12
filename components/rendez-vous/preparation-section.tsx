@@ -1,10 +1,8 @@
 "use client";
 
-import { Loader2Icon, SparklesIcon } from "lucide-react";
-import { useState, useTransition } from "react";
-import { toast } from "sonner";
+import { SparklesIcon } from "lucide-react";
+import { useState } from "react";
 
-import { genererPreparationAction } from "@/actions/preparation";
 import { Button } from "@/components/ui/button";
 import {
   PREPARATION_SECTIONS,
@@ -23,40 +21,23 @@ function Section({ label, value }: { label: string; value: string }) {
 
 /** Contenu du panneau Préparation — utilisé dans le panneau détail unifié du RDV. */
 export function PreparationSection({
-  rendezVousId,
   preparation: initialPreparation,
 }: {
   rendezVousId: string;
   preparation: unknown;
 }) {
   const parsed = preparationSchema.safeParse(initialPreparation);
-  const [preparation, setPreparation] = useState<Preparation | null>(
-    parsed.success ? parsed.data : null,
-  );
-  const [isPending, startTransition] = useTransition();
-
-  function handleGenerate() {
-    startTransition(async () => {
-      const result = await genererPreparationAction(rendezVousId);
-      if ("error" in result) {
-        toast.error(result.error);
-        return;
-      }
-      setPreparation(result.preparation);
-      toast.success("Fiche de préparation générée et envoyée à la CEO.");
-    });
-  }
+  const [preparation] = useState<Preparation | null>(parsed.success ? parsed.data : null);
 
   return (
     <div className="flex flex-col gap-3">
       <p className="text-muted-foreground text-xs">
-        Générée automatiquement la veille du rendez-vous et envoyée à la CEO. Génère-la manuellement
-        ici pour tester ou l&apos;anticiper.
+        Générée automatiquement la veille du rendez-vous et envoyée à la CEO.
       </p>
 
-      <Button onClick={handleGenerate} disabled={isPending} size="sm" className="self-start">
-        {isPending ? <Loader2Icon className="animate-spin" /> : <SparklesIcon />}
-        {preparation ? "Régénérer la fiche" : "Générer la fiche maintenant"}
+      <Button disabled size="sm" className="self-start" title="Bientôt disponible">
+        <SparklesIcon />
+        Générer la fiche maintenant — bientôt disponible
       </Button>
 
       {preparation ? (

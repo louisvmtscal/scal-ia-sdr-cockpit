@@ -63,7 +63,7 @@ import {
 import type { FirefliesFullTranscript, FirefliesMeeting } from "@/services/fireflies";
 import { formatDate } from "@/utils/format";
 
-type Vue = "recherche" | "resultats" | "transcription";
+type Vue = "recherche" | "resultats" | "transcription" | "compte-rendu";
 
 const NIVEAU_INTERET_OPTIONS: CompteRendu["niveauInteret"][] = ["Faible", "Moyen", "Fort"];
 const QUALIFICATION_OPTIONS: CompteRendu["qualification"][] = [
@@ -424,6 +424,25 @@ export function FirefliesSection({
     });
   }
 
+  /**
+   * Va directement au compte rendu (généré ou à générer) sans afficher la
+   * transcription complète — évite d'avoir à tout relire quand on veut juste
+   * consulter la synthèse. Charge quand même la transcription en arrière-plan
+   * (nécessaire pour générer/régénérer), mais ne l'affiche jamais ici.
+   */
+  function handleVoirCompteRendu() {
+    if (!firefliesMeetingId) return;
+    startTransition(async () => {
+      const result = await getTranscriptionFirefliesAction(firefliesMeetingId);
+      if ("error" in result) {
+        toast.error(result.error);
+        return;
+      }
+      setTranscript(result.transcript);
+      setVue("compte-rendu");
+    });
+  }
+
   function handleCopy() {
     if (!transcript) return;
     const texte = regrouperParLocuteur(transcript)
@@ -476,6 +495,10 @@ export function FirefliesSection({
                 </Button>
               </>
             ) : null}
+            <Button size="sm" variant="outline" onClick={handleVoirCompteRendu} disabled={isPending}>
+              {isPending ? <Loader2Icon className="animate-spin" /> : <SparklesIcon />}
+              Voir le compte rendu
+            </Button>
             <Button size="sm" variant="outline" onClick={handleVoirTranscriptionLiee} disabled={isPending}>
               {isPending ? <Loader2Icon className="animate-spin" /> : null}
               Voir la transcription
@@ -631,6 +654,43 @@ export function FirefliesSection({
               ))}
             </div>
           )}
+
+          <CompteRenduBlock
+            rendezVousId={rendezVousId}
+            societe={societe}
+            dateRDV={dateRDV}
+            transcript={transcript}
+            compteRendu={compteRendu}
+            compteRenduStatus={compteRenduStatus}
+            onUpdate={(cr) => {
+              setCompteRendu(cr);
+              setCompteRenduStatus("GENERE");
+            }}
+          />
+        </div>
+      ) : null}
+
+      {vue === "compte-rendu" && transcript ? (
+        <div className="flex flex-col gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="self-start"
+            onClick={() => setVue(firefliesMeetingId ? "recherche" : "resultats")}
+          >
+            <ArrowLeftIcon />
+            Retour
+          </Button>
+
+          <div>
+            <p className="text-sm font-medium">{transcript.meeting.title}</p>
+            <p className="text-muted-foreground text-xs">
+              {transcript.meeting.date ? formatDate(transcript.meeting.date) : "Date inconnue"}
+              {formatParticipants(transcript.meeting)
+                ? ` · ${formatParticipants(transcript.meeting)}`
+                : ""}
+            </p>
+          </div>
 
           <CompteRenduBlock
             rendezVousId={rendezVousId}
