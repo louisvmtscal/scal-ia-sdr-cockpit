@@ -217,9 +217,14 @@ model RendezVous {
   // qu'un transcript est associé avec confiance FIABLE (voir services/fireflies/sync.ts).
   compteRenduStatus CompteRenduStatus @default(EN_ATTENTE)
 
-  // --- Synchro calendrier (RDV pris via lien de prise de RDV HubSpot, lu depuis le flux
-  // iCal du Google Calendar connecté — voir services/calendar-sync.ts) ---
+  // Identifiant d'événement calendrier (iCal UID, ex. HubSpot `hs_i_cal_uid`) —
+  // permet un rapprochement Fireflies fiable si un jour disponible des deux côtés
+  // (voir services/fireflies/matching.ts, priorité 1).
   calendarEventId String? @unique
+
+  // --- RDV pris via le lien de prise de RDV HubSpot de Chloé (remplace
+  // l'ancien contournement iCal — voir services/hubspot-sync.ts) ---
+  hubspotMeetingId String? @unique
 
   notesInternes RendezVousNote[]
 
