@@ -5,9 +5,10 @@ import { subDays } from "date-fns";
 import { prisma } from "@/lib/prisma";
 
 const HUBSPOT_API_URL = "https://api.hubapi.com";
-// Chloé Einhorn — seule à utiliser un lien de prise de RDV public HubSpot à ce
-// jour (vérifié le 2026-10-13 : zéro résultat pour Louis sur les 30 derniers
-// jours). Les RDV de Louis restent synchronisés depuis le Google Sheet.
+// Chloé Einhorn mène les appels et c'est son nom qui apparaît comme
+// propriétaire de la réunion/du contact côté HubSpot (vérifié le 2026-10-13),
+// mais le RDV reste commercialement attribué à Louis (confirmé par Louis le
+// 2026-10-13) — voir l'attribution de `commercialId` à `louis` plus bas.
 const CHLOE_HUBSPOT_OWNER_ID = "437277916";
 const FENETRE_RATTRAPAGE_JOURS = 7;
 const RETRY_DELAYS_MS = [1000, 3000, 8000];
@@ -148,10 +149,12 @@ export type SynchroHubspotResultat = {
 
 /**
  * Synchro HubSpot -> RendezVous (voir app/api/cron/sync-hubspot/route.ts) :
- * récupère les RDV pris via le lien public de Chloé sur une fenêtre glissante,
- * ignore ceux déjà importés (dédoublonnage sur `hubspotMeetingId`, unique en
- * base), et pour les nouveaux, réutilise un RDV existant du Google Sheet si
- * un nom+date correspond (période de transition), sinon en crée un.
+ * récupère les RDV pris via le lien public HubSpot (Chloé mène les appels,
+ * mais Louis reste le commercial attribué — voir CHLOE_HUBSPOT_OWNER_ID plus
+ * haut) sur une fenêtre glissante, ignore ceux déjà importés (dédoublonnage
+ * sur `hubspotMeetingId`, unique en base), et pour les nouveaux, réutilise un
+ * RDV existant du Google Sheet si un nom+date correspond (période de
+ * transition), sinon en crée un.
  */
 export async function synchroniserHubspot(options?: { fromDate?: Date }): Promise<SynchroHubspotResultat> {
   const maintenant = new Date();
@@ -177,7 +180,7 @@ export async function synchroniserHubspot(options?: { fromDate?: Date }): Promis
   });
   const idsDejaImportes = new Set(dejaImportes.map((r) => r.hubspotMeetingId));
 
-  const chloe = await prisma.user.findUniqueOrThrow({ where: { email: "chloe@scal-ia.fr" } });
+  const louis = await prisma.user.findUniqueOrThrow({ where: { email: "louis@scal-ia.fr" } });
 
   for (const meeting of meetings) {
     if (idsDejaImportes.has(meeting.id)) {
@@ -205,9 +208,10 @@ export async function synchroniserHubspot(options?: { fromDate?: Date }): Promis
 
       // Période de transition : ce RDV existe peut-être déjà via le Google Sheet
       // (même prospect, même jour) — on le complète plutôt que d'en recréer un.
-      // Le Sheet assigne tout par défaut à Louis (il ne connaît pas le vrai
-      // commercial), donc on ne filtre jamais la recherche par commercialId —
-      // seul le nom + la date comptent, et on corrige vers Chloé si trouvé.
+      // On ne filtre jamais la recherche par commercialId : seul le nom + la
+      // date comptent, et on force explicitement Louis comme commercial
+      // (déjà la valeur par défaut du Sheet, mais explicite ici pour ne
+      // jamais dépendre de cette hypothèse).
       const dateDebut = new Date(dateRDV);
       dateDebut.setUTCHours(0, 0, 0, 0);
       const dateFin = new Date(dateRDV);
@@ -230,13 +234,13 @@ export async function synchroniserHubspot(options?: { fromDate?: Date }): Promis
       if (existant) {
         await prisma.rendezVous.update({
           where: { id: existant.id },
-          data: { commercialId: chloe.id, hubspotMeetingId: meeting.id, calendarEventId, email, dateRDV, societe },
+          data: { commercialId: louis.id, hubspotMeetingId: meeting.id, calendarEventId, email, dateRDV, societe },
         });
         resultat.misAJour += 1;
       } else {
         await prisma.rendezVous.create({
           data: {
-            commercialId: chloe.id,
+            commercialId: louis.id,
             origine: "OUTBOUND",
             nom,
             prenom,
