@@ -10,6 +10,14 @@ const HUBSPOT_API_URL = "https://api.hubapi.com";
 // mais le RDV reste commercialement attribué à Louis (confirmé par Louis le
 // 2026-10-13) — voir l'attribution de `commercialId` à `louis` plus bas.
 const CHLOE_HUBSPOT_OWNER_ID = "437277916";
+// Louis prend aussi des RDV directement (hors lien public de Chloé) : ils
+// arrivent côté HubSpot avec source BIDIRECTIONAL_SYNC (synchro calendrier)
+// et son propre owner id. Vérifié le 2026-10-15 sur 22 réunions récentes :
+// 21/22 ont "Scal-ia" dans le titre (gabarit commercial) — on exige ce
+// motif pour ce canal précis afin d'exclure le reste de son agenda
+// (réunions internes, persos) qui se synchronise aussi sous ce même source.
+const LOUIS_HUBSPOT_OWNER_ID = "95051743";
+const TITRE_COMMERCIAL_REGEX = /scal.?ia/i;
 const FENETRE_RATTRAPAGE_JOURS = 7;
 const RETRY_DELAYS_MS = [1000, 3000, 8000];
 
@@ -73,6 +81,7 @@ type HubspotMeeting = {
     hs_meeting_body: string | null;
     hs_i_cal_uid: string | null;
     hs_createdate: string | null;
+    hs_meeting_source: string | null;
   };
 };
 
@@ -81,7 +90,12 @@ type MeetingsSearchResponse = {
   paging?: { next?: { after: string } };
 };
 
-/** Fenêtre glissante des RDV pris via un lien public HubSpot, propriétaire Chloé. */
+/**
+ * Fenêtre glissante des RDV pris via les deux canaux connus :
+ * 1. Lien public HubSpot (Chloé mène l'appel, source MEETINGS_PUBLIC).
+ * 2. RDV calendrier de Louis (source BIDIRECTIONAL_SYNC), filtré côté
+ *    client sur le titre pour exclure le reste de son agenda.
+ */
 async function listerReunionsRecentes(fromDate: Date): Promise<HubspotMeeting[]> {
   const meetings: HubspotMeeting[] = [];
   let after: string | undefined;
@@ -98,9 +112,23 @@ async function listerReunionsRecentes(fromDate: Date): Promise<HubspotMeeting[]>
               { propertyName: "hs_createdate", operator: "GTE", value: String(fromDate.getTime()) },
             ],
           },
+          {
+            filters: [
+              { propertyName: "hs_meeting_source", operator: "EQ", value: "BIDIRECTIONAL_SYNC" },
+              { propertyName: "hubspot_owner_id", operator: "EQ", value: LOUIS_HUBSPOT_OWNER_ID },
+              { propertyName: "hs_createdate", operator: "GTE", value: String(fromDate.getTime()) },
+            ],
+          },
         ],
         sorts: [{ propertyName: "hs_createdate", direction: "ASCENDING" }],
-        properties: ["hs_meeting_title", "hs_meeting_start_time", "hs_meeting_body", "hs_i_cal_uid", "hs_createdate"],
+        properties: [
+          "hs_meeting_title",
+          "hs_meeting_start_time",
+          "hs_meeting_body",
+          "hs_i_cal_uid",
+          "hs_createdate",
+          "hs_meeting_source",
+        ],
         limit: 100,
         ...(after ? { after } : {}),
       }),
@@ -111,7 +139,15 @@ async function listerReunionsRecentes(fromDate: Date): Promise<HubspotMeeting[]>
     after = data.paging.next.after;
   }
 
-  return meetings;
+  // Le motif "Scal-ia" n'est exigé que pour départager le canal calendrier de
+  // Louis (BIDIRECTIONAL_SYNC, mélangé avec le reste de son agenda) — les RDV
+  // du lien public (MEETINGS_PUBLIC) sont déjà fiables par construction et ne
+  // portent pas toujours ce motif dans leur titre (ex. "X and Chloé Einhorn").
+  return meetings.filter(
+    (m) =>
+      m.properties.hs_meeting_source !== "BIDIRECTIONAL_SYNC" ||
+      TITRE_COMMERCIAL_REGEX.test(m.properties.hs_meeting_title ?? ""),
+  );
 }
 
 type HubspotContact = {
@@ -206,17 +242,32 @@ export async function synchroniserHubspot(options?: { fromDate?: Date }): Promis
       const dateRDV = new Date(meeting.properties.hs_meeting_start_time);
       const calendarEventId = meeting.properties.hs_i_cal_uid || null;
 
+      const dateDebut = new Date(dateRDV);
+      dateDebut.setUTCHours(0, 0, 0, 0);
+      const dateFin = new Date(dateRDV);
+      dateFin.setUTCHours(23, 59, 59, 999);
+
+      // Deux canaux HubSpot peuvent produire un identifiant de réunion
+      // différent pour le même événement réel (lien public + synchro
+      // calendrier de Louis) — on vérifie d'abord par email si ce prospect
+      // est déjà suivi via un autre identifiant avant de songer à créer.
+      const dejaSuiviAilleurs = await prisma.rendezVous.findFirst({
+        where: { email, hubspotMeetingId: { not: null }, dateRDV: { gte: dateDebut, lte: dateFin } },
+      });
+      if (dejaSuiviAilleurs) {
+        resultat.ignorees.push({
+          meetingId: meeting.id,
+          raison: `Déjà suivi via un autre canal HubSpot (RDV existant : ${dejaSuiviAilleurs.id}).`,
+        });
+        continue;
+      }
+
       // Période de transition : ce RDV existe peut-être déjà via le Google Sheet
       // (même prospect, même jour) — on le complète plutôt que d'en recréer un.
       // On ne filtre jamais la recherche par commercialId : seul le nom + la
       // date comptent, et on force explicitement Louis comme commercial
       // (déjà la valeur par défaut du Sheet, mais explicite ici pour ne
       // jamais dépendre de cette hypothèse).
-      const dateDebut = new Date(dateRDV);
-      dateDebut.setUTCHours(0, 0, 0, 0);
-      const dateFin = new Date(dateRDV);
-      dateFin.setUTCHours(23, 59, 59, 999);
-
       const normalise = (s: string) =>
         s
           .normalize("NFD")
