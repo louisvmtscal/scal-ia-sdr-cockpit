@@ -264,10 +264,13 @@ export async function synchroniserHubspot(options?: { fromDate?: Date }): Promis
 
       // Période de transition : ce RDV existe peut-être déjà via le Google Sheet
       // (même prospect, même jour) — on le complète plutôt que d'en recréer un.
-      // On ne filtre jamais la recherche par commercialId : seul le nom + la
-      // date comptent, et on force explicitement Louis comme commercial
-      // (déjà la valeur par défaut du Sheet, mais explicite ici pour ne
-      // jamais dépendre de cette hypothèse).
+      // On ne filtre jamais la recherche par commercialId : seul l'email ou le
+      // nom + la date comptent, et on force explicitement Louis comme
+      // commercial (déjà la valeur par défaut du Sheet, mais explicite ici
+      // pour ne jamais dépendre de cette hypothèse). L'email est vérifié en
+      // premier : HubSpot et le Sheet n'ordonnent pas toujours nom/prénom de
+      // la même façon pour la même personne (ex. "Pierre Pascal" devenu
+      // "Pascal Pierre"), ce qui ferait échouer un rapprochement par nom seul.
       const normalise = (s: string) =>
         s
           .normalize("NFD")
@@ -278,9 +281,9 @@ export async function synchroniserHubspot(options?: { fromDate?: Date }): Promis
       const candidats = await prisma.rendezVous.findMany({
         where: { hubspotMeetingId: null, dateRDV: { gte: dateDebut, lte: dateFin } },
       });
-      const existant = candidats.find(
-        (c) => normalise(c.prenom) === normalise(prenom) && normalise(c.nom) === normalise(nom),
-      );
+      const existant =
+        candidats.find((c) => c.email && c.email.toLowerCase().trim() === email) ??
+        candidats.find((c) => normalise(c.prenom) === normalise(prenom) && normalise(c.nom) === normalise(nom));
 
       if (existant) {
         await prisma.rendezVous.update({
