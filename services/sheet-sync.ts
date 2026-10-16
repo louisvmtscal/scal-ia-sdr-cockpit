@@ -83,14 +83,19 @@ export type SyncSheetResult = {
 };
 
 /**
- * Synchronise le tableau Google Sheet (source de vérité côté Louis) vers
- * RendezVous. Ne supprime jamais une ligne absente du sheet — additif et
- * correctif uniquement (création + mise à jour honore/qualifie/origine/date).
- * Les nouvelles lignes sont créées avec Louis comme commercial par défaut (le
- * sheet n'a pas de colonne Commercial — 100% des RDV existants étaient déjà
- * Louis au moment où cette sync a été introduite). Chaque nouvelle ligne est
- * marquée éligible au digest Agathe (voir services/digest-agathe.ts), jamais
- * sur une simple mise à jour d'un RDV existant.
+ * Synchronise le tableau Google Sheet vers RendezVous. Ne supprime jamais une
+ * ligne absente du sheet, et ne touche jamais `honore`/`qualifie` sur un RDV
+ * déjà existant : ce sont des cases cochées/modifiées à la main dans le
+ * Cockpit (voir rendez-vous-table.tsx), et le Sheet n'est plus tenu à jour en
+ * parallèle — un écrasement quotidien les "décochait" silencieusement
+ * (signalé par Louis le 2026-10-16). Seuls `dateRDV`/`origine` sont corrigés
+ * sur une ligne existante ; `honore`/`qualifie` ne sont posés qu'à la
+ * création. Les nouvelles lignes sont créées avec Louis comme commercial par
+ * défaut (le sheet n'a pas de colonne Commercial — 100% des RDV existants
+ * étaient déjà Louis au moment où cette sync a été introduite). Chaque
+ * nouvelle ligne est marquée éligible au digest Agathe (voir
+ * services/digest-agathe.ts), jamais sur une simple mise à jour d'un RDV
+ * existant.
  */
 export async function syncRendezVousFromSheet(): Promise<SyncSheetResult> {
   const csvUrl = process.env.RDV_SHEET_CSV_URL;
@@ -132,18 +137,12 @@ export async function syncRendezVousFromSheet(): Promise<SyncSheetResult> {
     );
 
     if (match) {
-      const needsUpdate =
-        match.honore !== honore ||
-        match.qualifie !== qualifie ||
-        match.origine !== origine ||
-        match.dateRDV.getTime() !== date.getTime();
+      const needsUpdate = match.origine !== origine || match.dateRDV.getTime() !== date.getTime();
 
       if (needsUpdate) {
         await prisma.rendezVous.update({
           where: { id: match.id },
           data: {
-            honore,
-            qualifie,
             origine,
             dateRDV: date,
             notes: match.notes ?? (row.note || null),
