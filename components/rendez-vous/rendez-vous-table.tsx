@@ -1,5 +1,6 @@
 "use client";
 
+import { endOfMonth, endOfWeek, startOfMonth, startOfWeek, subMonths, subWeeks } from "date-fns";
 import { ArrowDownIcon, ArrowUpIcon, ExternalLinkIcon, SearchIcon } from "lucide-react";
 import { useMemo, useOptimistic, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -66,6 +67,39 @@ const HONORE_FILTER_LABELS = {
   NON: "Honoré : non",
   A_REPLACER: "Honoré : à replacer",
 };
+
+const PERIODE_AJOUT_LABELS = {
+  TOUTES: "Ajoutés : toutes périodes",
+  CETTE_SEMAINE: "Ajoutés cette semaine",
+  SEMAINE_DERNIERE: "Ajoutés la semaine dernière",
+  CE_MOIS: "Ajoutés ce mois-ci",
+  MOIS_DERNIER: "Ajoutés le mois dernier",
+};
+type PeriodeAjoutKey = keyof typeof PERIODE_AJOUT_LABELS;
+
+/** Plage de dates sur `createdAt` (date d'ajout sur la plateforme, pas la date du RDV lui-même). */
+function periodeAjoutRange(key: PeriodeAjoutKey): { start: Date; end: Date } | null {
+  const now = new Date();
+
+  if (key === "CETTE_SEMAINE") {
+    return { start: startOfWeek(now, { weekStartsOn: 1 }), end: endOfWeek(now, { weekStartsOn: 1 }) };
+  }
+  if (key === "SEMAINE_DERNIERE") {
+    const semaineDerniere = subWeeks(now, 1);
+    return {
+      start: startOfWeek(semaineDerniere, { weekStartsOn: 1 }),
+      end: endOfWeek(semaineDerniere, { weekStartsOn: 1 }),
+    };
+  }
+  if (key === "CE_MOIS") {
+    return { start: startOfMonth(now), end: endOfMonth(now) };
+  }
+  if (key === "MOIS_DERNIER") {
+    const moisDernier = subMonths(now, 1);
+    return { start: startOfMonth(moisDernier), end: endOfMonth(moisDernier) };
+  }
+  return null;
+}
 
 /**
  * Vert = honoré et qualifié, orange = à replacer, rouge = non honoré ou
@@ -155,6 +189,7 @@ export function RendezVousTable({
   const [filterCommercial, setFilterCommercial] = useState<string>("TOUS");
   const [filterOrigine, setFilterOrigine] = useState<"TOUTES" | "INBOUND" | "OUTBOUND">("TOUTES");
   const [filterHonore, setFilterHonore] = useState<"TOUS" | HonoreStatus>("TOUS");
+  const [filterPeriodeAjout, setFilterPeriodeAjout] = useState<PeriodeAjoutKey>("TOUTES");
   const [sortKey, setSortKey] = useState<SortKey>("dateRDV");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
@@ -169,12 +204,15 @@ export function RendezVousTable({
 
   const rows = useMemo(() => {
     const term = search.trim().toLowerCase();
+    const periodeAjout = periodeAjoutRange(filterPeriodeAjout);
 
     const filtered = optimisticData.filter((row) => {
       if (pendingDeleteIds.has(row.id)) return false;
       if (filterCommercial !== "TOUS" && row.commercialId !== filterCommercial) return false;
       if (filterOrigine !== "TOUTES" && row.origine !== filterOrigine) return false;
       if (filterHonore !== "TOUS" && row.honore !== filterHonore) return false;
+      if (periodeAjout && (row.createdAt < periodeAjout.start || row.createdAt > periodeAjout.end))
+        return false;
 
       if (!term) return true;
 
@@ -208,6 +246,7 @@ export function RendezVousTable({
     filterCommercial,
     filterOrigine,
     filterHonore,
+    filterPeriodeAjout,
     sortKey,
     sortDir,
   ]);
@@ -343,6 +382,23 @@ export function RendezVousTable({
             <SelectItem value="OUI">Honoré : oui</SelectItem>
             <SelectItem value="NON">Honoré : non</SelectItem>
             <SelectItem value="A_REPLACER">Honoré : à replacer</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select
+          value={filterPeriodeAjout}
+          onValueChange={(value) => setFilterPeriodeAjout(value as PeriodeAjoutKey)}
+        >
+          <SelectTrigger className="w-48">
+            <SelectValue>
+              {(value: string) => PERIODE_AJOUT_LABELS[value as PeriodeAjoutKey]}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="TOUTES">Ajoutés : toutes périodes</SelectItem>
+            <SelectItem value="CETTE_SEMAINE">Ajoutés cette semaine</SelectItem>
+            <SelectItem value="SEMAINE_DERNIERE">Ajoutés la semaine dernière</SelectItem>
+            <SelectItem value="CE_MOIS">Ajoutés ce mois-ci</SelectItem>
+            <SelectItem value="MOIS_DERNIER">Ajoutés le mois dernier</SelectItem>
           </SelectContent>
         </Select>
       </div>
