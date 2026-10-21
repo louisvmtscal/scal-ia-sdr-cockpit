@@ -4,9 +4,13 @@ import type { NextRequest } from "next/server";
 import { syncRendezVousFromSheet } from "@/services/sheet-sync";
 
 /**
- * Déclenché périodiquement (cron-job.org, voir README) pour synchroniser le
- * Google Sheet de suivi RDV vers la table RendezVous. Protégé par
- * CRON_SECRET, comme les autres routes cron.
+ * Synchronise le Google Sheet de suivi RDV vers la table RendezVous.
+ * Plus planifiée automatiquement depuis le 2026-10-21 (retiré de
+ * vercel.json) : HubSpot (lien public de Chloé) est désormais la seule
+ * source pour les nouveaux RDV — le Sheet reste disponible en déclenchement
+ * manuel (bouton "Synchroniser" côté SDR/admin) pour les RDV historiques
+ * pris avant ce changement. Protégé par CRON_SECRET, comme les autres
+ * routes cron.
  */
 export async function GET(request: NextRequest) {
   const authHeader = request.headers.get("authorization");
