@@ -14,8 +14,22 @@ type SheetRow = {
   note: string;
 };
 
+/**
+ * Insensible aux accents, à la casse et aux tirets/underscores (traités
+ * comme des espaces) — un nom écrit différemment entre le Sheet et la base
+ * (ex. "Jean-Pierre" vs "jean pierre") faisait échouer le rapprochement et
+ * recréait une ligne fantôme à chaque passage du cron, y compris juste après
+ * sa suppression manuelle (signalé par Louis le 2026-10-21). Même technique
+ * que services/fireflies/matching.ts et services/hubspot-sync.ts.
+ */
 function normalize(value: string) {
-  return value.toLowerCase().trim().replace(/\s+/g, " ");
+  return value
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[-_]/g, " ")
+    .replace(/\s+/g, " ");
 }
 
 function mapHonore(value: string): HonoreStatus {
