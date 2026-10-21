@@ -151,14 +151,21 @@ export async function syncRendezVousFromSheet(): Promise<SyncSheetResult> {
     );
 
     if (match) {
-      const needsUpdate = match.origine !== origine || match.dateRDV.getTime() !== date.getTime();
+      // Un RDV déjà relié à HubSpot (`hubspotMeetingId`) a HubSpot comme
+      // source de vérité pour sa date — le Sheet n'a qu'une date sans heure
+      // (voir parseDate) et écraserait un horaire précis par minuit (bug
+      // vécu le 2026-10-21 sur Jean-Pierre Kaladjian, RDV à 17h ramené à
+      // 00h). Pour ces RDV, le Sheet ne corrige donc plus que `origine`.
+      const estLieAHubspot = match.hubspotMeetingId !== null;
+      const needsUpdate =
+        match.origine !== origine || (!estLieAHubspot && match.dateRDV.getTime() !== date.getTime());
 
       if (needsUpdate) {
         await prisma.rendezVous.update({
           where: { id: match.id },
           data: {
             origine,
-            dateRDV: date,
+            ...(estLieAHubspot ? {} : { dateRDV: date }),
             notes: match.notes ?? (row.note || null),
           },
         });
