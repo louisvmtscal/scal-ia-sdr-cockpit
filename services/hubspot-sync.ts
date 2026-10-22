@@ -131,16 +131,29 @@ type HubspotContact = {
 };
 
 /** Contact associé à une réunion (le prospect) — v3 search ne renvoie pas les associations, v4 dédié requis. */
+/**
+ * Louis (ou toute adresse @scal-ia.fr) peut être associé à la réunion en
+ * plus du vrai prospect (ex. en copie sur le calendrier) — l'ordre renvoyé
+ * par l'API associations n'est pas fiable, donc on exclut explicitement les
+ * contacts internes plutôt que de prendre le premier de la liste (bug vécu
+ * le 2026-10-22 : Anthony Youna importé comme "Louis Vimart").
+ */
 async function trouverContactAssocie(meetingId: string): Promise<HubspotContact | null> {
   const associations = await hubspotFetch<{ results: Array<{ toObjectId: number }> }>(
     `/crm/v4/objects/meetings/${meetingId}/associations/contacts`,
   );
-  const contactId = associations.results[0]?.toObjectId;
-  if (!contactId) return null;
+  if (associations.results.length === 0) return null;
 
-  return hubspotFetch<HubspotContact>(
-    `/crm/v3/objects/contacts/${contactId}?properties=email,firstname,lastname,company`,
+  const contacts = await Promise.all(
+    associations.results.map((a) =>
+      hubspotFetch<HubspotContact>(
+        `/crm/v3/objects/contacts/${a.toObjectId}?properties=email,firstname,lastname,company`,
+      ),
+    ),
   );
+
+  const prospect = contacts.find((c) => !c.properties.email?.toLowerCase().endsWith("@scal-ia.fr"));
+  return prospect ?? contacts[0] ?? null;
 }
 
 /** Le champ "société" du formulaire de prise de RDV, plus fiable que la fiche contact HubSpot. */
