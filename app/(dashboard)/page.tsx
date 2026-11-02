@@ -86,6 +86,7 @@ export default async function DashboardPage({
       icon: CoinsIcon,
       hint: `RDV honorés et qualifiés — ${periode.label}`,
       microHint: `Primes totales depuis le début : ${formatCurrency(stats.mesPrimesTotal)}`,
+      primesDetail: { items: stats.primesDetail, periodLabel: periode.label },
     },
   ];
 

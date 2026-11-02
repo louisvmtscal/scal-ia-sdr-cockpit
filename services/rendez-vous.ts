@@ -65,7 +65,8 @@ export async function getDashboardStats(
       }),
       prisma.rendezVous.findMany({
         where: { ...where, honore: "OUI", qualifie: true, dateRDV: dansLaPeriode },
-        select: { origine: true },
+        select: { id: true, prenom: true, nom: true, societe: true, origine: true, dateRDV: true },
+        orderBy: { dateRDV: "asc" },
       }),
       prisma.rendezVous.findMany({
         where: { ...where, honore: "OUI", qualifie: true },
@@ -82,6 +83,15 @@ export async function getDashboardStats(
   // "Mes primes" = sur la période sélectionnée. "Mes primes totales" = historique complet, sans limite de temps.
   const mesPrimes = sommePrimes(rdvPrimablesPeriode);
   const mesPrimesTotal = sommePrimes(rdvPrimablesTotal);
+  const primesDetail = rdvPrimablesPeriode.map((rdv) => ({
+    id: rdv.id,
+    prenom: rdv.prenom,
+    nom: rdv.nom,
+    societe: rdv.societe,
+    origine: rdv.origine,
+    dateRDV: rdv.dateRDV.toISOString(),
+    montant: PRIME_PAR_ORIGINE[rdv.origine],
+  }));
 
   return {
     totalPeriode,
@@ -92,6 +102,7 @@ export async function getDashboardStats(
     tauxQualification,
     mesPrimes,
     mesPrimesTotal,
+    primesDetail,
   };
 }
 

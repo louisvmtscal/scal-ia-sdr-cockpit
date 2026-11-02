@@ -1,5 +1,9 @@
 import type { LucideIcon } from "lucide-react";
 
+import {
+  PrimesDetailPopover,
+  type PrimeDetailItem,
+} from "@/components/dashboard/primes-detail-popover";
 import { Card, CardContent, CardDescription, CardHeader } from "@/components/ui/card";
 
 export function StatCard({
@@ -8,6 +12,7 @@ export function StatCard({
   icon: Icon,
   hint,
   microHint,
+  primesDetail,
 }: {
   label: string;
   value: string;
@@ -15,12 +20,18 @@ export function StatCard({
   hint?: string;
   /** Ligne complémentaire, affichée encore plus petite que `hint` (ex: un total historique à côté d'une valeur bornée dans le temps). */
   microHint?: string;
+  /** Si renseigné, l'icône devient cliquable et liste les RDV pris en compte dans le calcul. */
+  primesDetail?: { items: PrimeDetailItem[]; periodLabel: string };
 }) {
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardDescription>{label}</CardDescription>
-        <Icon className="text-muted-foreground size-4" />
+        {primesDetail ? (
+          <PrimesDetailPopover items={primesDetail.items} periodLabel={primesDetail.periodLabel} />
+        ) : (
+          <Icon className="text-muted-foreground size-4" />
+        )}
       </CardHeader>
       <CardContent>
         <p className="text-2xl font-semibold tracking-tight">{value}</p>
