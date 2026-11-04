@@ -12,6 +12,7 @@ import {
   rendezVousSchema,
   type RendezVousInput,
 } from "@/lib/validations/rendez-vous";
+import { supprimerRendezVous } from "@/services/rendez-vous";
 
 function toDate(value?: string | null) {
   if (!value) return null;
@@ -113,7 +114,7 @@ export async function updateRendezVousAction(
 }
 
 export async function deleteRendezVousAction(id: string) {
-  await prisma.rendezVous.delete({ where: { id } });
+  await supprimerRendezVous(id);
   revalidateRendezVous();
 }
 

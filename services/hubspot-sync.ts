@@ -168,6 +168,8 @@ export type SynchroHubspotResultat = {
   crees: number;
   misAJour: number;
   dejaImportees: number;
+  /** Réunions volontairement supprimées du Cockpit, jamais recréées (table HubspotReunionIgnoree). */
+  supprimeesManuellement: number;
   replanifies: Array<{ rendezVousId: string; de: string; vers: string }>;
   ignorees: Array<{ meetingId: string; raison: string }>;
   erreurs: Array<{ meetingId: string; message: string }>;
@@ -239,6 +241,7 @@ export async function synchroniserHubspot(options?: { fromDate?: Date }): Promis
     crees: 0,
     misAJour: 0,
     dejaImportees: 0,
+    supprimeesManuellement: 0,
     replanifies: [],
     ignorees: [],
     erreurs: [],
@@ -263,11 +266,22 @@ export async function synchroniserHubspot(options?: { fromDate?: Date }): Promis
   });
   const idsDejaImportes = new Set(dejaImportes.map((r) => r.hubspotMeetingId));
 
+  const supprimees = await prisma.hubspotReunionIgnoree.findMany({
+    where: { hubspotMeetingId: { in: meetings.map((m) => m.id) } },
+    select: { hubspotMeetingId: true },
+  });
+  const idsSupprimees = new Set(supprimees.map((r) => r.hubspotMeetingId));
+
   const louis = await prisma.user.findUniqueOrThrow({ where: { email: "louis@scal-ia.fr" } });
 
   for (const meeting of meetings) {
     if (idsDejaImportes.has(meeting.id)) {
       resultat.dejaImportees += 1;
+      continue;
+    }
+
+    if (idsSupprimees.has(meeting.id)) {
+      resultat.supprimeesManuellement += 1;
       continue;
     }
 

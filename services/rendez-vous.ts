@@ -35,6 +35,33 @@ export async function listRendezVous(scope: Scope) {
   });
 }
 
+/**
+ * Supprime un RDV. S'il vient de HubSpot, sa réunion est mémorisée dans la
+ * même transaction : sans ça, la synchro le recréerait au prochain passage
+ * (voir services/hubspot-sync.ts, HubspotReunionIgnoree).
+ */
+export async function supprimerRendezVous(id: string) {
+  await prisma.$transaction(async (tx) => {
+    const rdv = await tx.rendezVous.findUnique({
+      where: { id },
+      select: { hubspotMeetingId: true, prenom: true, nom: true, societe: true },
+    });
+
+    if (rdv?.hubspotMeetingId) {
+      await tx.hubspotReunionIgnoree.upsert({
+        where: { hubspotMeetingId: rdv.hubspotMeetingId },
+        create: {
+          hubspotMeetingId: rdv.hubspotMeetingId,
+          label: `${rdv.prenom} ${rdv.nom} — ${rdv.societe}`,
+        },
+        update: {},
+      });
+    }
+
+    await tx.rendezVous.delete({ where: { id } });
+  });
+}
+
 export async function getRendezVousById(id: string) {
   return prisma.rendezVous.findUnique({ where: { id } });
 }

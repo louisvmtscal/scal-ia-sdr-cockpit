@@ -236,6 +236,21 @@ model RendezVous {
   @@map("rendez_vous")
 }
 
+/**
+ * Réunions HubSpot dont le RDV a été supprimé à la main dans le Cockpit : la
+ * synchro HubSpot (services/hubspot-sync.ts) ne doit plus jamais les
+ * recréer, sinon une suppression ne tiendrait que jusqu'au prochain passage.
+ */
+model HubspotReunionIgnoree {
+  id               String   @id @default(cuid())
+  hubspotMeetingId String   @unique
+  // Repère lisible (ex. "Prénom Nom — Société") pour s'y retrouver en base.
+  label            String?
+  createdAt        DateTime @default(now())
+
+  @@map("hubspot_reunions_ignorees")
+}
+
 /** Thread de coordination interne par RDV (Louis <-> Chloé) — jamais visible du prospect. */
 model RendezVousNote {
   id String @id @default(cuid())
