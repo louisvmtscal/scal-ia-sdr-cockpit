@@ -168,9 +168,58 @@ export type SynchroHubspotResultat = {
   crees: number;
   misAJour: number;
   dejaImportees: number;
+  replanifies: Array<{ rendezVousId: string; de: string; vers: string }>;
   ignorees: Array<{ meetingId: string; raison: string }>;
   erreurs: Array<{ meetingId: string; message: string }>;
 };
+
+type BatchReadResponse = {
+  results: Array<{ id: string; properties: { hs_meeting_start_time: string | null } }>;
+};
+
+/**
+ * Une replanification via le lien HubSpot garde le même identifiant de
+ * réunion mais change son horaire (constaté le 2026-11-03 sur Samir Farag).
+ * La recherche principale ne regarde que les réunions récemment créées et
+ * saute celles déjà importées : on relit donc directement l'horaire des RDV à
+ * venir déjà liés à HubSpot, qui reste la référence pour leur date. Une
+ * réunion supprimée côté HubSpot n'est pas renvoyée et reste inchangée.
+ */
+async function appliquerReplanifications(resultat: SynchroHubspotResultat, maintenant: Date) {
+  const rendezVousLies = await prisma.rendezVous.findMany({
+    where: { hubspotMeetingId: { not: null }, dateRDV: { gte: subDays(maintenant, 1) } },
+    select: { id: true, hubspotMeetingId: true, dateRDV: true },
+  });
+  const lies = rendezVousLies.flatMap((r) =>
+    r.hubspotMeetingId ? [{ id: r.id, meetingId: r.hubspotMeetingId, dateRDV: r.dateRDV }] : [],
+  );
+
+  for (let i = 0; i < lies.length; i += 100) {
+    const lot = lies.slice(i, i + 100);
+    const data = await hubspotFetch<BatchReadResponse>("/crm/v3/objects/meetings/batch/read", {
+      method: "POST",
+      body: JSON.stringify({
+        properties: ["hs_meeting_start_time"],
+        inputs: lot.map((r) => ({ id: r.meetingId })),
+      }),
+    });
+    const debutParReunion = new Map(data.results.map((m) => [m.id, m.properties.hs_meeting_start_time]));
+
+    for (const rdv of lot) {
+      const debut = debutParReunion.get(rdv.meetingId);
+      if (!debut) continue;
+      const nouvelleDate = new Date(debut);
+      if (Number.isNaN(nouvelleDate.getTime()) || nouvelleDate.getTime() === rdv.dateRDV.getTime()) continue;
+
+      await prisma.rendezVous.update({ where: { id: rdv.id }, data: { dateRDV: nouvelleDate } });
+      resultat.replanifies.push({
+        rendezVousId: rdv.id,
+        de: rdv.dateRDV.toISOString(),
+        vers: nouvelleDate.toISOString(),
+      });
+    }
+  }
+}
 
 /**
  * Synchro HubSpot -> RendezVous (voir app/api/cron/sync-hubspot/route.ts) :
@@ -190,9 +239,18 @@ export async function synchroniserHubspot(options?: { fromDate?: Date }): Promis
     crees: 0,
     misAJour: 0,
     dejaImportees: 0,
+    replanifies: [],
     ignorees: [],
     erreurs: [],
   };
+
+  try {
+    await appliquerReplanifications(resultat, maintenant);
+  } catch (error) {
+    const message = error instanceof HubspotApiError ? error.message : "Erreur inattendue.";
+    resultat.erreurs.push({ meetingId: "replanifications", message });
+    console.error("[hubspot-sync] Erreur lors de la mise à jour des replanifications :", error);
+  }
 
   const meetings = await listerReunionsRecentes(fromDate);
   resultat.reunionsLues = meetings.length;
